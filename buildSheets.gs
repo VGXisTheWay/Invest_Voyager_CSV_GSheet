@@ -327,8 +327,8 @@ function gainsForumulas(coin){
 }
 
 function buildCurrentMarket(coins){
-  currentMarket = createSheet('Current Market')
-  row = 1;
+  var currentMarket = createSheet('Current Market')
+  var row = 1;
 
   for (coin in coins){
     if (coin != 'total_interest' && coin != 'USD'){
@@ -344,12 +344,12 @@ function buildCurrentMarket(coins){
 
 function buildCoinForecast(coins){
   coinForecast = createSheet('Coin Forecast')
-  row = 1;
+  var row = 1;
 
   for (coin in coins){
     if (coin != 'total_interest' && coin != 'USD'){
       Logger.log(coin);
-      url = rowOfCoin(coin, 'forecast');
+      var url = rowOfCoin(coin, 'forecast');
       if(url != "N/A"){
         //coinForecast.getRange('B' + String(row)).setValue(url);
         //coinForecast.getRange('A' + String(row)).setValue(coin);
@@ -411,4 +411,89 @@ function createSheet(sheetName){
   newSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   newSheet.activate();
   return newSheet
+}
+
+function buildCoinURLsSheet(){
+  var coinURLs =
+    {AAVE:{coinMarketCap:'https://coinmarketcap.com/currencies/aave/', coinPriceForcast:'https://coinpriceforecast.com/aave'},
+    ADA:{coinMarketCap:'https://coinmarketcap.com/currencies/cardano/', coinPriceForcast:'https://coinpriceforecast.com/cardano-forecast-2020-2025-2030'},
+    ALGO:{coinMarketCap:'https://coinmarketcap.com/currencies/algorand/', coinPriceForcast:'https://coinpriceforecast.com/algorand'},
+    ATOM:{coinMarketCap:'https://coinmarketcap.com/currencies/cosmos/', coinPriceForcast:''},
+    AVAX:{coinMarketCap:'https://coinmarketcap.com/currencies/avalanche/', coinPriceForcast:'https://coinpriceforecast.com/avalanche'},
+    BAND:{coinMarketCap:'https://coinmarketcap.com/currencies/band-protocol/', coinPriceForcast:''},
+    BAT:{coinMarketCap:'https://coinmarketcap.com/currencies/basic-attention-token/', coinPriceForcast:''},
+    BCH:{coinMarketCap:'https://coinmarketcap.com/currencies/bitcoin-cash/', coinPriceForcast:'https://coinpriceforecast.com/bitcoin-cash-forecast-2020-2025-2030'},
+    BSV:{coinMarketCap:'https://coinmarketcap.com/currencies/bitcoin-sv/', coinPriceForcast:'https://coinpriceforecast.com/bsv'},
+    BTC:{coinMarketCap:'https://coinmarketcap.com/currencies/bitcoin/', coinPriceForcast:'https://coinpriceforecast.com/bitcoin-forecast-2020-2025-2030'},
+    BTT:{coinMarketCap:'https://coinmarketcap.com/currencies/bittorrent/', coinPriceForcast:'https://coinpriceforecast.com/btt'},
+    CELO:{coinMarketCap:'https://coinmarketcap.com/currencies/celo/', coinPriceForcast:'https://coinpriceforecast.com/celo'},
+    CHZ:{coinMarketCap:'https://coinmarketcap.com/currencies/chiliz/', coinPriceForcast:'https://coinpriceforecast.com/chiliz'},
+    CKB:{coinMarketCap:'https://coinmarketcap.com/currencies/nervos-network/', coinPriceForcast:''},
+    COMP:{coinMarketCap:'https://coinmarketcap.com/currencies/compound/', coinPriceForcast:'https://coinpriceforecast.com/compound'},
+    DAI:{coinMarketCap:'https://coinmarketcap.com/currencies/multi-collateral-dai/', coinPriceForcast:''},
+    DASH:{coinMarketCap:'https://coinmarketcap.com/currencies/dash/', coinPriceForcast:'https://coinpriceforecast.com/dash-forecast-2020-2025-2030'},
+    DGB:{coinMarketCap:'https://coinmarketcap.com/currencies/digibyte/', coinPriceForcast:''},
+    DOGE:{coinMarketCap:'https://coinmarketcap.com/currencies/dogecoin/', coinPriceForcast:'https://coinpriceforecast.com/dogecoin'},
+    DOT:{coinMarketCap:'https://coinmarketcap.com/currencies/polkadot-new/', coinPriceForcast:'https://coinpriceforecast.com/dot'},
+    EGLD:{coinMarketCap:'https://coinmarketcap.com/currencies/elrond-egld/', coinPriceForcast:''},
+    ENJ:{coinMarketCap:'https://coinmarketcap.com/currencies/enjin-coin/', coinPriceForcast:''},
+    EOS:{coinMarketCap:'https://coinmarketcap.com/currencies/eos/', coinPriceForcast:'https://coinpriceforecast.com/eos'},
+    ETC:{coinMarketCap:'https://coinmarketcap.com/currencies/ethereum-classic/', coinPriceForcast:'https://coinpriceforecast.com/ethereum-classic-forecast-2020-2025-2030'},
+    ETH:{coinMarketCap:'https://coinmarketcap.com/currencies/ethereum/', coinPriceForcast:'https://coinpriceforecast.com/ethereum-forecast-2020-2025-2030'},
+    FIL:{coinMarketCap:'https://coinmarketcap.com/currencies/filecoin/', coinPriceForcast:'https://coinpriceforecast.com/filecoin'},
+    GLM:{coinMarketCap:'https://coinmarketcap.com/currencies/golem-network-tokens/', coinPriceForcast:''},
+    GRT:{coinMarketCap:'https://coinmarketcap.com/currencies/the-graph/', coinPriceForcast:'https://coinpriceforecast.com/grt'},
+    HBAR:{coinMarketCap:'https://coinmarketcap.com/currencies/hedera-hashgraph/', coinPriceForcast:''},
+    ICX:{coinMarketCap:'https://coinmarketcap.com/currencies/icon/', coinPriceForcast:''},
+    IOT:{coinMarketCap:'https://coinmarketcap.com/currencies/iot-chain/', coinPriceForcast:''},
+    KNC:{coinMarketCap:'https://coinmarketcap.com/currencies/kyber-network-crystal-legacy/', coinPriceForcast:''},
+    LINK:{coinMarketCap:'https://coinmarketcap.com/currencies/chainlink/', coinPriceForcast:'https://coinpriceforecast.com/chainlink'},
+    LTC:{coinMarketCap:'https://coinmarketcap.com/currencies/litecoin/', coinPriceForcast:'https://coinpriceforecast.com/litecoin-forecast-2020-2025-2030'},
+    LUNA:{coinMarketCap:'https://coinmarketcap.com/currencies/terra-luna/', coinPriceForcast:'https://coinpriceforecast.com/terra'},
+    MANA:{coinMarketCap:'https://coinmarketcap.com/currencies/decentraland/', coinPriceForcast:'https://coinpriceforecast.com/mana'},
+    MATIC:{coinMarketCap:'https://coinmarketcap.com/currencies/polygon/', coinPriceForcast:'https://coinpriceforecast.com/polygon'},
+    MKR:{coinMarketCap:'https://coinmarketcap.com/currencies/maker/', coinPriceForcast:''},
+    NEO:{coinMarketCap:'https://coinmarketcap.com/currencies/neo/', coinPriceForcast:'https://coinpriceforecast.com/neo-forecast-2020-2025-2030'},
+    OCEAN:{coinMarketCap:'https://coinmarketcap.com/currencies/ocean-protocol/', coinPriceForcast:''},
+    OMG:{coinMarketCap:'https://coinmarketcap.com/currencies/omg/', coinPriceForcast:''},
+    ONT:{coinMarketCap:'https://coinmarketcap.com/currencies/ontology/', coinPriceForcast:'https://coinpriceforecast.com/ontology'},
+    OXT:{coinMarketCap:'https://coinmarketcap.com/currencies/orchid/', coinPriceForcast:''},
+    QTUM:{coinMarketCap:'https://coinmarketcap.com/currencies/qtum/', coinPriceForcast:''},
+    SHIB:{coinMarketCap:'https://coinmarketcap.com/currencies/shiba-inu/', coinPriceForcast:'https://coinpriceforecast.com/shib'},
+    SRM:{coinMarketCap:'https://coinmarketcap.com/currencies/serum/', coinPriceForcast:''},
+    STMX:{coinMarketCap:'https://coinmarketcap.com/currencies/stormx/', coinPriceForcast:''},
+    SUSHI:{coinMarketCap:'https://coinmarketcap.com/currencies/sushiswap/', coinPriceForcast:'https://coinpriceforecast.com/sushi'},
+    TRX:{coinMarketCap:'https://coinmarketcap.com/currencies/tron/', coinPriceForcast:'https://coinpriceforecast.com/tron'},
+    TUSD:{coinMarketCap:'https://coinmarketcap.com/currencies/trueusd/', coinPriceForcast:''},
+    UMA:{coinMarketCap:'https://coinmarketcap.com/currencies/uma/', coinPriceForcast:''},
+    UNI:{coinMarketCap:'https://coinmarketcap.com/currencies/uniswap/', coinPriceForcast:'https://coinpriceforecast.com/uniswap'},
+    USDC:{coinMarketCap:'https://coinmarketcap.com/currencies/usd-coin/', coinPriceForcast:''},
+    USDT:{coinMarketCap:'https://coinmarketcap.com/currencies/tether/', coinPriceForcast:''},
+    VET:{coinMarketCap:'https://coinmarketcap.com/currencies/vechain/', coinPriceForcast:'https://coinpriceforecast.com/vechain'},
+    VGX:{coinMarketCap:'https://coinmarketcap.com/currencies/voyager-token/', coinPriceForcast:''},
+    XLM:{coinMarketCap:'https://coinmarketcap.com/currencies/stellar/', coinPriceForcast:'https://coinpriceforecast.com/stellar-forecast-2020-2025-2030'},
+    XMR:{coinMarketCap:'https://coinmarketcap.com/currencies/monero/', coinPriceForcast:'https://coinpriceforecast.com/monero-forecast-2020-2025-2030'},
+    XTZ:{coinMarketCap:'https://coinmarketcap.com/currencies/tezos/', coinPriceForcast:'https://coinpriceforecast.com/tezos'},
+    XVG:{coinMarketCap:'https://coinmarketcap.com/currencies/verge/', coinPriceForcast:''},
+    YFI:{coinMarketCap:'https://coinmarketcap.com/currencies/yearn-finance/', coinPriceForcast:'https://coinpriceforecast.com/yfi'},
+    ZEC:{coinMarketCap:'https://coinmarketcap.com/currencies/zcash/', coinPriceForcast:'https://coinpriceforecast.com/zcash-forecast-2020-2025-2030'},
+    ZRX:{coinMarketCap:'https://coinmarketcap.com/currencies/0x/', coinPriceForcast:''}
+    };
+  var coinURLsSheet = createSheet("2 Coin URLs");
+  coinURLsSheet.getRange('B1').setValue('CoinMarketCap URLs');
+  coinURLsSheet.getRange('C1').setValue('CoinPriceForecast URLs');
+
+  var row = 2
+  for ([coin, url] of Object.entries(coinURLs)){
+    coinURLsSheet.getRange('A' + String(row)).setValue(coin);
+    coinURLsSheet.getRange('B' + String(row)).setValue(url['coinMarketCap']);
+    if (url['coinPriceForcast'] != ''){
+      coinURLsSheet.getRange('C' + String(row)).setValue(url['coinPriceForcast']);
+    }
+    else{
+      coinURLsSheet.getRange('C' + String(row)).setValue('N/A');
+    }
+    row = row+1;
+  }
+  resizeAllColumns();
 }
