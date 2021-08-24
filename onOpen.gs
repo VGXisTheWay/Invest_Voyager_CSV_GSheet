@@ -11,6 +11,7 @@ function onOpen() {
 
   buildVoyagerInterestSheet();
   getHeroImageIDs();
+  buildCoinURLsSheet();
   SpreadsheetApp.flush();
 }
 

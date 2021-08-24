@@ -479,7 +479,7 @@ function buildCoinURLsSheet(){
     ZEC:{coinMarketCap:'https://coinmarketcap.com/currencies/zcash/', coinPriceForcast:'https://coinpriceforecast.com/zcash-forecast-2020-2025-2030'},
     ZRX:{coinMarketCap:'https://coinmarketcap.com/currencies/0x/', coinPriceForcast:''}
     };
-  var coinURLsSheet = createSheet("2 Coin URLs");
+  var coinURLsSheet = createSheet("Coin URLs");
   coinURLsSheet.getRange('B1').setValue('CoinMarketCap URLs');
   coinURLsSheet.getRange('C1').setValue('CoinPriceForecast URLs');
 
