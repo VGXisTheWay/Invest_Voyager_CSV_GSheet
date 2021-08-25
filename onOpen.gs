@@ -14,27 +14,3 @@ function onOpen() {
   buildCoinURLsSheet();
   SpreadsheetApp.flush();
 }
-
-function getHeroImageIDs() { //save image blobs to global for fast fetching later
-  if (PropertiesService.getScriptProperties().getProperty('img0') != undefined){
-    var folder = DriveApp.getFolderById("1pwmbq7WmHkVCsxj9m3FkpfXUEn-D5mJv");
-    var files = folder.getFiles();
-    var fileIDarray = new Array;
-    var c=0;
-
-    while(files.hasNext()) {
-      var s = files.next();
-      fileIDarray[c] = s.getId();
-      PropertiesService.getScriptProperties().setProperty('img'+String(c), fileIDarray[c]);
-      c=c+1;
-    }
-  }
-}
-
-function loadImageBytes(id){
-  var bytes = DriveApp.getFileById(id).getBlob().getBytes();
-  //Logger.log(bytes.length)
-  var base64 = Utilities.base64Encode(bytes);
-  //Logger.log(base64.length)
-  return base64
-}

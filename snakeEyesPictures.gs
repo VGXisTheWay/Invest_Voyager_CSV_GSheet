@@ -2,8 +2,8 @@ function displayImgModal(imageCount){
   var output = HtmlService.createHtmlOutput();
   var html= ""
   var i = 0
-  while (i < imageCount){ //for ([img, blob] of Object.entries(imgBlobs)){
-    blob = imgBlobs[i]; //PropertiesService.getScriptProperties().getProperty('img'+String(i));
+  while (i < imageCount){
+    blob = imgBlobs[i];
     html="<p style='text-align:center;'> <img src='data:image/jpg;base64,"+ blob + "' /></p>";
     output.setContent(html);
     output.setWidth(600);
@@ -20,11 +20,54 @@ function displayHeroImg(imgNum){
   var html= ""
   var imgID = PropertiesService.getScriptProperties().getProperty('img'+String(imgNum));
 
-  var blob = loadImageBytes(imgID)//imgBlobs[imageNum]; //PropertiesService.getScriptProperties().getProperty('img'+String(i));
+  var blob = loadImageBytes(imgID);
   html="<p style='display:flex; justify-content:center;'> <img src='data:image/jpg;base64,"+ blob + "' style='max-width:95vw; max-height:85vh; width:auto;height:auto;'/></p>";
   //output.setContent(html);
   //output.setWidth(600);
   //output.setHeight(600);
 
   return html; //output;
+}
+
+function getHeroImageIDs() { //save image blobs to global for fast fetching later
+  if (PropertiesService.getScriptProperties().getProperty('img0') != undefined){
+    var folder = DriveApp.getFolderById("1pwmbq7WmHkVCsxj9m3FkpfXUEn-D5mJv");
+    var files = folder.getFiles();
+    var fileIDarray = new Array;
+    var c=0;
+    var imgIDs = [];
+
+    while ( files.hasNext() ){
+      imgIDs.push(files.next().getId());
+    }
+
+    while (c<100){
+      PropertiesService.getScriptProperties().setProperty('img'+String(c), imgIDs[Math.floor(Math.random() * (100 - 1 + 1)) + 1]);
+      c += 1;
+    }
+
+    /*
+    while(files.hasNext()) {
+      var s = files.next();
+      //if(c%3===0 && c < 500){
+      fileIDarray[c] = s.getId();
+      PropertiesService.getScriptProperties().setProperty('img'+String(c), fileIDarray[c]);
+      //}
+      c=c+1;
+    }*/
+    //PropertiesService.getScriptProperties().setProperty('imageIDs', fileIDarray);
+    Logger.log(c);
+  }
+}
+
+function loadImageBytes(id){
+  var bytes = DriveApp.getFileById(id).getBlob().getBytes();
+  //Logger.log(bytes.length)
+  var base64 = Utilities.base64Encode(bytes);
+  //Logger.log(base64.length)
+  return base64
+}
+
+function randomIntFromInterval(min, max) { // min and max included
+  return Math.floor(Math.random() * (max - min + 1) + min)
 }

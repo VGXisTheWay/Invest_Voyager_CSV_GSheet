@@ -304,8 +304,6 @@ function importJSON(url,xpath){
   }
 }
 
-
-
 function gainsForumulas(coin){
   voyagerInterest = new Array;
 

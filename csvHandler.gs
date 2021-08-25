@@ -8,12 +8,20 @@ function importVoyagerCSVgmail(){
       var message = threads[0].getMessages()[0];
     }
     catch{
-      alertUser(
+      response = alertUser(
         '⚠️ ERROR',
         'Unable to find email from "taxes@investvoyager.com"' +
-        '\r\nBe sure the email is starred and in your GMail inbox',
-        buttonSet.OK
+        '\r\nBe sure the email is starred and in your GMail inbox' +
+        '\r\n\r\nWould you like to use dummy data instead?',
+        buttonSet.YES_NO_CANCEL
       )
+      if (response == true){
+        csvData = importDummyVoyagerCSV(sheet)
+        buildVoyagerCSVSheet(csvData);
+      }
+      else{
+        return;
+      }
     }
     var attachment = message.getAttachments()[0];
     console.log(threads[0].getFirstMessageSubject());
@@ -47,43 +55,16 @@ function importVoyagerCSVgmail(){
     }
   }
 }
-/*
-function del_importCSVFromGoogleDrive() {
-  var file = DriveApp.getFilesByName("data.csv").next();
-  var csvData = Utilities.parseCsv(file.getBlob().getDataAsString());
-  var sheet = SpreadsheetApp.getActiveSheet();
-  sheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
-}*/
-/*
-function del_importGoogleDriveCSV(){
-  var params = {
-    q: "title contains 'Voyager' and trashed=false",
-    fields: "items(id, title)"
-  };
-  var res = Drive.Files.list(params);
-  Logger.log(res)
-
-  var fileName = 'title contains "_transactions_" and trashed=false';
-  var files = findFilesInDrive(fileName);
-  if(files.length === 0) {
-    displayToastAlert("No files with name \"" + fileName + "\" were found in Google Drive.");
-    return;
-  } else if(files.length > 1) {
-    displayToastAlert("Multiple files with name " + fileName +" were found. This program does not support picking the right file yet.");
-    return;
-  }
-  var file = files[0];
-  var contents = file.getBlob().getDataAsString();
-  displayToastAlert(contents, "Alert");
-}*/
 
 function importDummyVoyagerCSV(sheet){
   csvData = dummyVoyagerCSV();
   Logger.log(csvData)
-  sheet.clearContents().clearFormats();
-  sheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
+  dummySheet = createSheet('Voyager CSV')
+  //sheet.clearContents().clearFormats();
+  //dummySheet.getRange("A1").setValue("DUMMY DATA");
+  dummySheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
   resizeAllColumns();
-  sheet.setName('DUMMY Voyager CSV');
+  //sheet.setName('DUMMY Voyager CSV');
   return csvData
 }
 
@@ -100,7 +81,9 @@ function importCSV(attachment, sheet){
 function buildVoyagerCSVSheet(data) {
   var sheet = SpreadsheetApp.getActiveSheet();
   var transactions = {};
-  transactions['total_interest'] = 0;
+  var transaction_id = '';
+  var base_asset = '';
+  var i = 0;
   /**
    * Voyager default format should have 9 columns:
    * transaction_date, transaction_id, transaction_direction, transaction_type, base_asset, quote_asset, quantity, net_amount, price
@@ -120,24 +103,24 @@ function buildVoyagerCSVSheet(data) {
   var output = HtmlService.createHtmlOutput();
   htmlPopUp('<b>Much work. Ready soon... ' +
               '<br><br>' +
-              displayHeroImg(String(Math.floor(Math.random() * (250 - 1 + 1)) + 1)),
+              displayHeroImg(randomIntFromInterval(0,100)),
               'Processing...'
             );
 
   for (var i = 1; i < data.length; i++) {
-    var transaction_id = data[i][1];
-    var base_asset = data[i][4];
+    transaction_id = data[i][1];
+    base_asset = data[i][4];
 
     if (i % 15 === 0){ //display progress every X transactions
       htmlPopUp('<b>Processed Transaction ' +
                   String(i) + "/" + String(data.length-1) +
                   '<br><br>' +
-                  displayHeroImg(String(Math.floor(Math.random() * (250 - 1 + 1)) + 1)),
+                  displayHeroImg(randomIntFromInterval(0,100)),
                   'Processing...'
                 );
     }
     //Build dict of dicts.  base_assets and their transaction_id's
-    Logger.log("Processing Transaction " + String(i) + "/" + String(data.length-1) + " w/ID " + transaction_id) //"Building dict for transaction: " + transaction_id)
+    Logger.log("Processing Transaction " + String(i) + "/" + String(data.length-1) + " w/ID " + transaction_id)
 
     if (transactions[base_asset] == undefined){
       transactions[base_asset] = {};
@@ -148,12 +131,12 @@ function buildVoyagerCSVSheet(data) {
     }
     //displayToastAlert(transactions[base_asset][transaction_id][1], -1)
   }
-  processingComplete = '<b>'+ "Processed " + String(i-1) + "/" + String(data.length-1) + " Transactions </b>";
+  //var processingStatus = '<b>'+ "Processed " + String(i-1) + "/" + String(data.length-1) + " Transactions </b>";
 
   htmlPopUp('<b>Processed ' +
                   String(i-1) + "/" + String(data.length-1) +
                   ' Transactions </b><br><br>' +
-                  displayHeroImg(String(Math.floor(Math.random() * (250 - 1 + 1)) + 1)),
+                  displayHeroImg(randomIntFromInterval(0,100)),
                   'Building Current Market Sheet...'
                 );
 
@@ -161,28 +144,38 @@ function buildVoyagerCSVSheet(data) {
   htmlPopUp('<b>Processed ' +
                   String(i-1) + "/" + String(data.length-1) +
                   ' Transactions </b><br><br>' +
-                  displayHeroImg(String(Math.floor(Math.random() * (250 - 1 + 1)) + 1)),
+                  displayHeroImg(randomIntFromInterval(0,100)),
                   'Building Coin Forecast Sheet...'
                 );
   buildCoinForecast(transactions);
+  htmlPopUp('<b>Processed ' +
+    String(i-1) + "/" + String(data.length-1) +
+    ' Transactions </b><br><br>' +
+    displayHeroImg(randomIntFromInterval(0,100)),
+    'Calculating Coin Totals...'
+  );
 
-  var total_cost_net_amount = 0
+  var total_bought = 0
+  transactions['total_interest'] = 0;
+  transactions['total_sold_in_USD'] = 0
   var status = "<b>Coin Totals:</b><br>"
 
   for([coin, dict] of Object.entries(transactions)){
-    totals = countTotalQty(transactions[coin]);
+    var totals = countTotalQty(transactions[coin]);
     transactions[coin]['TotalQty'] = totals['quantity'];
     transactions[coin]['net_amount'] = totals['net_amount'];
+    transactions['total_sold_in_USD'] = transactions['total_sold_in_USD'] + totals['total_sold_in_USD'];
     Logger.log(coin + " Total: " + totals['quantity']);
-    if (coin != "USD" && coin != "total_interest"){
+    if (coin != "USD" && coin != "total_interest" && coin != 'total_sold_in_USD'){
       Logger.log(dict)
-      status = status + "<br>" + coin + ": " + totals['quantity']
-      total_cost_net_amount = total_cost_net_amount + totals['net_amount']
+      var status = status + "<br>" + coin + ": " + totals['quantity']
+      total_bought = total_bought + totals['total_bought']
     }
     transactions['total_interest'] = transactions['total_interest'] + totals['interest'];
   }
 
-  var usdTotal = transactions["USD"]['TotalQty'] - total_cost_net_amount
+  Logger.log("Total USD:" + String(transactions["USD"]['TotalQty']) + ", total sold:" + String(transactions['total_sold_in_USD']) + ", bought:" + String(total_bought));
+  var usdTotal = transactions["USD"]['TotalQty'] + transactions['total_sold_in_USD'] - total_bought;
 
   status = status + "<br>USD: " + String(usdTotal);
   status = status + "<br><br>TOTAL INTEREST: " + String(transactions['total_interest']);
@@ -232,31 +225,43 @@ function findFilesInDrive(filename) {
 function countTotalQty(coin){
   var totals = {};
   totals['quantity'] = 0;
-  totals['net_amount'] = 0
-  totals['interest'] = 0
+  totals['net_amount'] = 0;
+  totals['interest'] = 0;
+  totals['total_sold_in_USD'] = 0;
+  totals['total_bought'] = 0;
 
   for([transaction, value] of Object.entries(coin)){
-    Logger.log(transaction)
-    Logger.log(value)
-    var coin = value['base_asset']
-    var buy_sell_deposit = value['transaction_direction']
-    var transaction_type = value['transaction_type']
-    Logger.log(buy_sell_deposit)
-    if (buy_sell_deposit == "Buy" || buy_sell_deposit == "deposit"){
-      totals['quantity'] = totals['quantity'] + value['quantity']
+    Logger.log(transaction);
+    Logger.log(value);
+    var coin = value['base_asset'];
+    var buy_sell_deposit = value['transaction_direction'];
+    var transaction_type = value['transaction_type'];
+    Logger.log(buy_sell_deposit);
+
+    if (buy_sell_deposit == "Buy"){
+      totals['quantity'] = totals['quantity'] + value['quantity'];
+      totals['total_bought'] = totals['total_bought'] + value['net_amount'].round(2);
+    }
+    else if (buy_sell_deposit == "deposit"){
+      totals['quantity'] = totals['quantity'] + value['quantity'];
+
       if (transaction_type != "INTEREST" && transaction_type != "ADMIN"){
         totals['net_amount'] = totals['net_amount'] + value['net_amount'];
       }
       else if (transaction_type == "INTEREST"){
-        totals['interest'] = totals['interest'] + value['net_amount']
+        totals['interest'] = totals['interest'] + value['net_amount'];
       }
     }
     else if (buy_sell_deposit == "Sell"){
-      totals['quantity'] = totals['quantity'] - value['quantity']
-      totals['net_amount'] = totals['net_amount'] - value['net_amount']
+      totals['quantity'] = totals['quantity'] - value['quantity'];
+      totals['net_amount'] = totals['net_amount'] - value['net_amount'];
+      totals['total_sold_in_USD'] = totals['total_sold_in_USD'] + value['net_amount']
     }
   }
   return totals
+}
+Number.prototype.round = function(places) {
+  return +(Math.round(this + "e+" + places)  + "e-" + places);
 }
 
 function rowToDict(sheet, rownumber) {
