@@ -1,6 +1,57 @@
-function buildGainsSheet(){
-  gainsSheet = createSheet('2 Gains')
-  gainsSheet.getRange('A1').setValue('Value');
+function buildGainsSheet(transactions){
+  var gainsSheet = createSheet('2 Gains');
+  var activeRange = SpreadsheetApp.getActiveRange();
+  var gainsHeaders = ["Coin", "Current Interest", "Quantity", "Ave Daily Qty", "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned"];
+  var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
+  var i = 0;
+  for (header in gainsHeaders){
+    gainsSheet.getRange(1,i+1).setValue(gainsHeaders[i]);
+    i += 1;
+  }
+
+  headerRange.setBackgroundRGB(119,136,153);
+  headerRange.setFontStyle('bold');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setWrap(true);
+
+  //gainsSheet.activate();
+
+  voyagerInterest = new Array;
+
+  var row = 2;
+  for([coin, value] of Object.entries(transactions)){
+    if (coin != "USD"){
+      gainsSheet.getRange(row,1).setValue(coin);
+      //Interest
+      gainsSheet.getRange(row,2).setFormula("=SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(" + '"*' + coin + '*"' + ",'Voyager Interest'!$C:$C,0),1)," + '"*"' + ',"")');
+      //Quantity
+      gainsSheet.getRange(row,3).setFormula("=SUM(SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," +'"Buy"' + ")+SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"deposit"))');
+      //Average Daily
+      //Working on this.......
+      //Expected Interest
+      gainsSheet.getRange(row,5).setFormula('=IF(C'+row+'<>"#N/A",$D'+row+'*$C'+row+'/12)');
+      //Ave Cost Per Coin
+      gainsSheet.getRange(row,6).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ",'Voyager CSV'!$D:$D," + '"<>REWARD"' + ")/SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ", 'Voyager CSV'!$D:$D," + '"<>REWARD")');
+      //Total Cost
+      gainsSheet.getRange(row,7).setFormula('$C'+row+'*$F'+row);
+      //7-Day Price Graph
+      gainsSheet.getRange(row,8).setFormula('=SPARKLINE(CRYPTOFINANCE("' + coin + '", "sparkline"))');
+      //Current Price
+      gainsSheet.getRange(row,9).setFormula("=INDEX('Current Market'!$A:$C,MATCH(" + '"' + coin + '"' + ",'Current Market'!$A:$A,0),3)");
+      //Current Value
+      gainsSheet.getRange(row,10).setFormula('$C'+row+'*$I'+row);
+      //$ Gain
+      gainsSheet.getRange(row,11).setFormula('($C'+row+'*$I'+row+')-($C'+row+'*$F'+row+')');
+      //Percent Gain
+      gainsSheet.getRange(row,12).setFormula('($C'+row+'*$I'+row+')/($C'+row+'*$F'+row+')-1');
+      gainsSheet.getRange(row,12).setNumberFormat("##%");
+      //Total Interest Earned
+      gainsSheet.getRange(row,13).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"'  + ",'Voyager CSV'!$D:$D," + '"=INTEREST")');
+      row += 1;
+    }
+  }
+  //Forcast Value 2021
+    //gainsSheet.getRange(row,12).setFormula('=SUBSTITUTE(INDEX("Coin Forecast"!$A:$E,MATCH("'+coin+'","Coin Forecast"!$A:$A,0)+1,4), "*","")'); //+2,4 for 2022 etc.
 }
 
 function getAveBalDict(sym){
@@ -301,26 +352,6 @@ function importJSON(url,xpath){
       Utilities.sleep(100);
       if (++count == maxTries) throw err;
     }
-  }
-}
-
-function gainsForumulas(coin){
-  voyagerInterest = new Array;
-
-  var row = 4
-  for([transaction, value] of Object.entries(coin)){
-    voyagerInterest[coin] = '=SUBSTITUTE(INDEX("Voyager Interest!"$B:$C,MATCH("*' + coin + '*","Voyager Interest"!$C:$C,0),1), "*","")';
-    qty[coin] = '=SUM(SUMIFS("Voyager CSV"!$G:$G,"Voyager CSV"!$E:$E,"'+coin+'","Voyager CSV"!$C:$C,"Buy")+SUMIFS("Voyager CSV"!$G:$G,"Voyager CSV"!$E:$E,"'+coin+'","Voyager CSV"!$C:$C,"deposit"))';
-    expectedInterest[coin] = '=IF(C'+row+'<>"#N/A",$E'+row+'*$C'+row+'/12)'
-    aveCostPerCoin[coin] = '=SUMIFS("Voyager CSV"!$H:$H,"Voyager CSV"!$E:$E,"'+coin+'","Voyager CSV"!$D:$D,"<>REWARD")/SUMIFS("Voyager CSV"!$G:$G,"Voyager CSV"!$E:$E,""+coin+"", "Voyager CSV"!$D:$D, "<>REWARD")';
-    totalCost[coin] = '$D'+row+'*$G'+row;
-    currentPrice[coin] = '=INDEX("Current Market"!$A:$C,MATCH("'+coin+'","Current Market"!$A:$A,0),3)';
-    currentValue[coin] = '$D'+row+'*$J'+row;
-    gain[coin] = '($D'+row+'*$J'+row+')-($D'+row+'*$G'+row+')';
-    percentGain[coin] = '($D'+row+'*$J'+row+')/($D'+row+'*$G'+row+')-1';
-    totalInterestEarned[coin] = '=SUMIFS("Voyager CSV"!$H:$H,"Voyager CSV"!$E:$E,"'+coin+'","Voyager CSV"!$D:$D,"=INTEREST")';
-    forcastValue[coin]["2021"] = '=SUBSTITUTE(INDEX("Coin Forecast"!$A:$E,MATCH("'+coin+'","Coin Forecast"!$A:$A,0)+1,4), "*","")'; //+2,4 for 2022 etc.
-    row += 1;
   }
 }
 

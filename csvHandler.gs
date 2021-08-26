@@ -103,7 +103,7 @@ function buildVoyagerCSVSheet(data) {
   var output = HtmlService.createHtmlOutput();
   htmlPopUp('<b>Much work. Ready soon... ' +
               '<br><br>' +
-              displayHeroImg(randomIntFromInterval(0,100)),
+              displayHeroImg(randomIntFromInterval(0,250)),
               'Processing...'
             );
 
@@ -115,7 +115,7 @@ function buildVoyagerCSVSheet(data) {
       htmlPopUp('<b>Processed Transaction ' +
                   String(i) + "/" + String(data.length-1) +
                   '<br><br>' +
-                  displayHeroImg(randomIntFromInterval(0,100)),
+                  displayHeroImg(randomIntFromInterval(0,250)),
                   'Processing...'
                 );
     }
@@ -136,7 +136,7 @@ function buildVoyagerCSVSheet(data) {
   htmlPopUp('<b>Processed ' +
                   String(i-1) + "/" + String(data.length-1) +
                   ' Transactions </b><br><br>' +
-                  displayHeroImg(randomIntFromInterval(0,100)),
+                  displayHeroImg(randomIntFromInterval(0,250)),
                   'Building Current Market Sheet...'
                 );
 
@@ -144,17 +144,24 @@ function buildVoyagerCSVSheet(data) {
   htmlPopUp('<b>Processed ' +
                   String(i-1) + "/" + String(data.length-1) +
                   ' Transactions </b><br><br>' +
-                  displayHeroImg(randomIntFromInterval(0,100)),
+                  displayHeroImg(randomIntFromInterval(0,250)),
                   'Building Coin Forecast Sheet...'
                 );
   buildCoinForecast(transactions);
   htmlPopUp('<b>Processed ' +
     String(i-1) + "/" + String(data.length-1) +
     ' Transactions </b><br><br>' +
-    displayHeroImg(randomIntFromInterval(0,100)),
+    displayHeroImg(randomIntFromInterval(0,250)),
+    'Building Gains Sheet...'
+  );
+  buildGainsSheet(transactions);
+
+  htmlPopUp('<b>Processed ' +
+    String(i-1) + "/" + String(data.length-1) +
+    ' Transactions </b><br><br>' +
+    displayHeroImg(randomIntFromInterval(0,250)),
     'Calculating Coin Totals...'
   );
-
   var total_bought = 0
   transactions['total_interest'] = 0;
   transactions['total_sold_in_USD'] = 0
@@ -260,6 +267,7 @@ function countTotalQty(coin){
   }
   return totals
 }
+
 Number.prototype.round = function(places) {
   return +(Math.round(this + "e+" + places)  + "e-" + places);
 }
@@ -293,7 +301,7 @@ function dummyVoyagerCSV() {
               '\r\n2020-02-02 01:00:00.000000+00:00,ADA2468012,Buy,TRADE,ADA,USD,100,125.00,1.25' +
               '\r\n2020-01-03 01:00:00.000000+00:00,STEVE42691,Buy,TRADE,VGX,USD,1000,2000.00,2.00' +
               '\r\n2020-02-04 01:00:00.000000+00:00,STEVE2MOON,Buy,TRADE,VGX,USD,15000,33750.00,2.25' +
-              '\r\n2020-02-04 01:10:00.000000+00:00,STMX123456,Buy,TRADE,STMX,USD,400000,10000.00,0.025' +
+              '\r\n2020-02-04 01:10:00.000000+00:00,STMX123456,Buy,TRADE,STMX,USD,400000,25000.00,0.025' +
               '\r\n2020-03-01 01:10:00.000000+00:00,VGXINT1234,deposit,INTEREST,VGX,N/A,25,87.50,3.50' +
               '\r\n2020-03-02 01:15:00.000000+00:00,DOT1234545,Buy,TRADE,DOT,USD,10,200.00,20.00';
 

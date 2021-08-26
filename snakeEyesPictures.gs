@@ -41,21 +41,11 @@ function getHeroImageIDs() { //save image blobs to global for fast fetching late
       imgIDs.push(files.next().getId());
     }
 
-    while (c<100){
-      PropertiesService.getScriptProperties().setProperty('img'+String(c), imgIDs[Math.floor(Math.random() * (100 - 1 + 1)) + 1]);
+    while (c<250){
+      PropertiesService.getScriptProperties().setProperty('img'+String(c), imgIDs[Math.floor(Math.random() * (250 - 1 + 1)) + 1]);
       c += 1;
     }
 
-    /*
-    while(files.hasNext()) {
-      var s = files.next();
-      //if(c%3===0 && c < 500){
-      fileIDarray[c] = s.getId();
-      PropertiesService.getScriptProperties().setProperty('img'+String(c), fileIDarray[c]);
-      //}
-      c=c+1;
-    }*/
-    //PropertiesService.getScriptProperties().setProperty('imageIDs', fileIDarray);
     Logger.log(c);
   }
 }
