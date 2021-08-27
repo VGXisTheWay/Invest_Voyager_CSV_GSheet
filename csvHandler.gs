@@ -18,6 +18,7 @@ function importVoyagerCSVgmail(){
       if (response == true){
         csvData = importDummyVoyagerCSV(sheet)
         buildVoyagerCSVSheet(csvData);
+        return;
       }
       else{
         return;
