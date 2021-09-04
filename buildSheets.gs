@@ -1,20 +1,19 @@
 function buildGainsSheet(transactions){
-  var gainsSheet = createSheet('2 Gains');
+  var gainsSheet = createSheet('Gains');
   var activeRange = SpreadsheetApp.getActiveRange();
-  var gainsHeaders = ["Coin", "Current Interest", "Quantity", "Ave Daily Qty", "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned"];
+  var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned"];
   var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
   var i = 0;
+  var transactionsVGX_length = 0;
   for (header in gainsHeaders){
     gainsSheet.getRange(1,i+1).setValue(gainsHeaders[i]);
     i += 1;
   }
 
   headerRange.setBackgroundRGB(119,136,153);
-  headerRange.setFontStyle('bold');
+  headerRange.setFontWeight('bold');
   headerRange.setHorizontalAlignment('center');
   headerRange.setWrap(true);
-
-  //gainsSheet.activate();
 
   voyagerInterest = new Array;
 
@@ -23,13 +22,28 @@ function buildGainsSheet(transactions){
     if (coin != "USD"){
       gainsSheet.getRange(row,1).setValue(coin);
       //Interest
-      gainsSheet.getRange(row,2).setFormula("=SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(" + '"*' + coin + '*"' + ",'Voyager Interest'!$C:$C,0),1)," + '"*"' + ',"")');
+      if(["BTC", "ETH", "USDC"].includes(coin)){
+        gainsSheet.getRange(row,2).setFormula("=IFS(INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>20000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.5%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>5000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.0%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>500,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+0.5%)");
+        transactionsVGX_length = Object.keys(transactions['VGX']).length-1;
+        if(transactions['VGX'][transactionsVGX_length]['total_quantity']>500){
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Adventurer! 0.5% BOOST');
+        }
+        else if(transactions['VGX'][transactionsVGX_length]['total_quantity']>5000){
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Explorer! 1% BOOST');
+        }
+        else if(transactions['VGX'][transactionsVGX_length]['total_quantity']>20000){
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Navigator! 1.5% BOOST');
+        }
+      }
+      else{
+        gainsSheet.getRange(row,2).setFormula("=SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(" + '"*' + coin + '*"' + ",'Voyager Interest'!$C:$C,0),1)," + '"*"' + ',"")');
+      }
       //Quantity
-      gainsSheet.getRange(row,3).setFormula("=SUM(SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," +'"Buy"' + ")+SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"deposit"))');
+      gainsSheet.getRange(row,3).setFormula("=SUM(SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," +'"Buy"' + ")+SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"deposit"' + ")-SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"Sell"))');
       //Average Daily
-      //Working on this.......
+      gainsSheet.getRange(row,4).setFormula('=getAveBal($A'+row+')');
       //Expected Interest
-      gainsSheet.getRange(row,5).setFormula('=IF(C'+row+'<>"#N/A",$D'+row+'*$C'+row+'/12)');
+      gainsSheet.getRange(row,5).setFormula('=IF(C'+row+'<>"#N/A",$D'+row+'*$B'+row+'/12)');
       //Ave Cost Per Coin
       gainsSheet.getRange(row,6).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ",'Voyager CSV'!$D:$D," + '"<>REWARD"' + ")/SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ", 'Voyager CSV'!$D:$D," + '"<>REWARD")');
       //Total Cost
@@ -50,218 +64,136 @@ function buildGainsSheet(transactions){
       row += 1;
     }
   }
+  //Set cells that show column totals
+  //Sum Expected Interest
+  i=2; //start at row 2 because row 1 is headers
+  expectedInterest = "=0"
+  while (i<row){
+    if (gainsSheet.getRange(i,5).getValue() != "#N/A"){ //skips coins that don't earn interest
+      expectedInterest = expectedInterest + "+(E" + String(i) + "* I" + String(i) + ")"; //add (multiply Ave Daily by Current Price)
+    }
+    i+=1;
+  }
+  gainsSheet.getRange(row,5).setFormula(expectedInterest).setFontWeight('bold').setFontSize(12).setNumberFormat("$#,##0.00;$(#,##0.00)");
+  //Sum Total Cost Column
+  gainsSheet.getRange(row,7).setFormula("=SUMIF(G2:G" +String(row-1)+",\"<>#DIV/0!\",G2:G"+String(row-1)+")").setFontWeight('bold').setFontSize(12);
+  gainsSheet.getRange("G:G").setNumberFormat("$#,##0.00;$(#,##0.00)");
+  //Sum Total Current Value Column
+  gainsSheet.getRange(row,10).setFormula("=SUMIF(J2:J" +String(row-1)+",\"<>#DIV/0!\",J2:J"+String(row-1)+")").setFontWeight('bold').setFontSize(12);
+  gainsSheet.getRange("J:J").setNumberFormat("$#,##0.00;$(#,##0.00)");
+  //Sum Total $ Gain Column
+  gainsSheet.getRange(row,11).setFormula("=SUMIF(K2:K" +String(row-1)+",\"<>#DIV/0!\",K2:K"+String(row-1)+")").setFontWeight('bold').setFontSize(12);
+  gainsSheet.getRange("K:K").setNumberFormat("$#,##0.00;$(#,##0.00)");
+  //Sum Total Interest Earned
+  gainsSheet.getRange(row,13).setFormula("=SUMIF(M2:M" +String(row-1)+",\"<>#DIV/0!\",M2:M"+String(row-1)+")").setFontWeight('bold').setFontSize(12);
+  gainsSheet.getRange("M:M").setNumberFormat("$#,##0.00;$(#,##0.00)");
+  //Set Interest column to center
+  gainsSheet.getRange("B:B").setHorizontalAlignment('center');
   //Forcast Value 2021
     //gainsSheet.getRange(row,12).setFormula('=SUBSTITUTE(INDEX("Coin Forecast"!$A:$E,MATCH("'+coin+'","Coin Forecast"!$A:$A,0)+1,4), "*","")'); //+2,4 for 2022 etc.
-}
-
-function getAveBalDict(sym){
-  //var sym = "DOT/USD"
-  var mth = new Date().getMonth()
-  var date = new Date();
-  var lastDayOfThisMonth = new Date(date.getFullYear(), mth+1, 0).getDate();
-  var today = date.getDate();
-  var dayTotals = []
-  var aveDailyBal
-  var i = 0
-  var x = 1
-  var daysSkipped = 1
-  var thisTransDate
-  var nextTransDate
-  //var s = SpreadsheetApp.getActiveSpreadsheet();
-  //var sht = s.getSheetByName('Transaction History')
-  //var drng = sht.getDataRange();
-  //var rng = sht.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
-  //var rngA = rng.getValues();//Array of input values
-
-
-  for(var i = 0; i < rngA.length; i++){  //iterate through all transactions
-
-    if (rngA[i][1].indexOf(sym)>-1 && new Date(rngA[i][2]).getMonth() == mth){ //symbol and transaction month match what was requested
-
-      console.log("Row: " + i + ", " + rngA[i][1] + ", " + new Date(rngA[i][2]) + ", " + rngA[i][5])
-      thisTransDate = new Date(rngA[i][2]).getDate()
-
-      if (thisTransDate == new Date(rngA[i+1][2]).getDate()){  //Check if this day has multiple transactions
-        console.log("Next transaction occurs on the same day. Skipping this iteration...")
-        daysSkipped++
-        continue
-      } else if(thisTransDate == new Date(rngA[i+1][2]).getDate() && thisTransDate == 1){ //Transaction ocurred on the 1st so yesterdays total is todays.
-        if (rngA[i-1][1] == sym){
-          console.log("Transaction ocurred on 1st. Setting to yesterdays total: " + String(rngA[i-1][5]-rngA[i-1][4]))
-          dayTotals[0] = rngA[i-1][5]-rngA[i-1][4]
-        } else{
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[0] = 0
-        }
-        continue
-      } else if (thisTransDate == 1 && rngA[i-1][1] == sym){  //transactions don't take affect until the following day. so this date gets yesterday's total
-        if (rngA[i-1][1] == sym){
-          console.log("Day: " + String(x) + " Total: " + rngA[i-1][5])
-          dayTotals[i] = rngA[i-1][5]
-        } else{
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[i] = 0
-        }
-
-        x++
-      }
-
-      nextTransDate = new Date(rngA[i+1][2]).getDate()
-
-      if (rngA[i-daysSkipped][1] != sym && x == 1){ //this is the first transaction ever made for this symbol and every day's total quantity through today is zero.
-          console.log("First ever transaction for " + sym + ". Setting preceeding days total to zero.")
-        while (x <= thisTransDate){
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[x] = 0
-          x++
-        }
-      }
-
-      if (rngA[i+1][1].indexOf(sym) == -1 || new Date(rngA[i+1][2]).getMonth() != mth){  //Check if this is the last transaction for the month
-        while (x <= lastDayOfThisMonth && x <= today - 1){
-          if (rngA[i-1][1] == sym || x > 1){  //Make sure the last transaction was the same symbol.
-            console.log("Day: " + String(x) + " Total: " + rngA[i][5])
-            dayTotals[x] = rngA[i][5]
-          } else{ //Otherwise, this is the first transaction ever made for this symbol and today's total quantity is zero.
-            console.log("Day: " + String(x) + " Total: 0")
-            dayTotals[x] = 0
-          }
-          x++
-        }
-      }
-      else{  //there's more transactions for this symbol in this month
-        while ( x <= nextTransDate){  //only process dates leading up to the day of next transaction
-        console.log("Day: " + String(x) + " Total: " + rngA[i][5])
-        dayTotals[x] = rngA[i][5]
-        x++
-        }
-      }
-    }
-  }
-
-  if (dayTotals.length == 0){ //No transactions found for the month. Get latest total quantity and carry it forward
-    i = rngA.length-1
-    while (rngA[i][1].indexOf(sym)<0){
-      i--
-      dayTotals[0] = rngA[i][5]
-    }
-  }
-
-  if (dayTotals.length == 1){
-    console.log("Monthly ave balance calculate as: " + String(dayTotals[0]))
-    aveDailyBal = dayTotals[0]
-  }
-  else{
-    console.log("Monthly ave balance calculate as: " + String(dayTotals.reduce((a, b) => a + b, 0) / (x-1)))
-    aveDailyBal = dayTotals.reduce((a, b) => a + b, 0) / (x-1)
-  }
-
-  return aveDailyBal;
+  resizeAllColumns();
 }
 
 // Calculate average balance for this month
 function getAveBal(sym){
-  //var sym = "DOT/USD"
-  var mth = new Date().getMonth()
+  //var sym = "BTT";
+  var currentMonth = new Date().getMonth();
   var date = new Date();
-  var lastDayOfThisMonth = new Date(date.getFullYear(), mth+1, 0).getDate();
+  var lastDayOfThisMonth = new Date(date.getFullYear(), currentMonth+1, 0).getDate();
   var today = date.getDate();
-  var dayTotals = []
-  var aveDailyBal
-  var i = 0
-  var x = 1
-  var daysSkipped = 1
-  var thisTransDate
-  var nextTransDate
-  var s = SpreadsheetApp.getActiveSpreadsheet();
-  var sht = s.getSheetByName('Transaction History')
-  var drng = sht.getDataRange();
-  var rng = sht.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
-  var rngA = rng.getValues();//Array of input values
-
-
-  for(var i = 0; i < rngA.length; i++){  //iterate through all transactions
-
-    if (rngA[i][1].indexOf(sym)>-1 && new Date(rngA[i][2]).getMonth() == mth){ //symbol and transaction month match what was requested
-
-      console.log("Row: " + i + ", " + rngA[i][1] + ", " + new Date(rngA[i][2]) + ", " + rngA[i][5])
-      thisTransDate = new Date(rngA[i][2]).getDate()
-
-      if (thisTransDate == new Date(rngA[i+1][2]).getDate()){  //Check if this day has multiple transactions
-        console.log("Next transaction occurs on the same day. Skipping this iteration...")
-        daysSkipped++
-        continue
-      } else if(thisTransDate == new Date(rngA[i+1][2]).getDate() && thisTransDate == 1){ //Transaction ocurred on the 1st so yesterdays total is todays.
-        if (rngA[i-1][1] == sym){
-          console.log("Transaction ocurred on 1st. Setting to yesterdays total: " + String(rngA[i-1][5]-rngA[i-1][4]))
-          dayTotals[0] = rngA[i-1][5]-rngA[i-1][4]
-        } else{
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[0] = 0
-        }
-        continue
-      } else if (thisTransDate == 1 && rngA[i-1][1] == sym){  //transactions don't take affect until the following day. so this date gets yesterday's total
-        if (rngA[i-1][1] == sym){
-          console.log("Day: " + String(x) + " Total: " + rngA[i-1][5])
-          dayTotals[i] = rngA[i-1][5]
-        } else{
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[i] = 0
-        }
-
-        x++
-      }
-
-      nextTransDate = new Date(rngA[i+1][2]).getDate()
-
-      if (rngA[i-daysSkipped][1] != sym && x == 1){ //this is the first transaction ever made for this symbol and every day's total quantity through today is zero.
-          console.log("First ever transaction for " + sym + ". Setting preceeding days total to zero.")
-        while (x <= thisTransDate){
-          console.log("Day: " + String(x) + " Total: 0")
-          dayTotals[x] = 0
-          x++
-        }
-      }
-
-      if (rngA[i+1][1].indexOf(sym) == -1 || new Date(rngA[i+1][2]).getMonth() != mth){  //Check if this is the last transaction for the month
-        while (x <= lastDayOfThisMonth && x <= today - 1){
-          if (rngA[i-1][1] == sym || x > 1){  //Make sure the last transaction was the same symbol.
-            console.log("Day: " + String(x) + " Total: " + rngA[i][5])
-            dayTotals[x] = rngA[i][5]
-          } else{ //Otherwise, this is the first transaction ever made for this symbol and today's total quantity is zero.
-            console.log("Day: " + String(x) + " Total: 0")
-            dayTotals[x] = 0
+  var dayTotals = [];
+  var aveDailyBal;
+  var i = 0;
+  var x = 0;
+  var thisTransDate;
+  var transactions = voyager_csv_sheet_to_dictionary(false);
+  var transaction;
+  var transaction_value;
+  var coin;
+  var dict = transactions[sym];
+  var total_quantity = 0;
+  /*
+  function orderBySubKey( input, key ) {
+    return Object.values( input ).map( value => value ).sort( (a, b) => a[key] - b[key] );
+  }
+  var newdict = orderBySubKey(dict,'transaction_date')*/
+  for ([transaction, transaction_value] of Object.entries(dict)){
+    if (transaction_value != 'total_quantity'){
+      transaction = parseInt(transaction);
+      thisTransDate = new Date(transaction_value['transaction_date']);
+      total_quantity = total_quantity + transaction_value['quantity'];
+      if (thisTransDate.getMonth() == currentMonth){
+        x+=1;
+        if (thisTransDate.getDate() == 1){ //Transaction ocurred on the 1st so yesterday's total is today's.
+          if (dict[transaction - 1] != undefined){ //make sure this isn't the first time this coin has been seen
+            console.log("Transaction ocurred on 1st. Setting to yesterdays total: " + String(dict[transaction - 1]['total_quantity']));
+            dayTotals[thisTransDate.getDate()] = dict[transaction - 1]['total_quantity'];
+            console.log("Day: " + String(thisTransDate.getDate()+1) + " Total: " + String(dict[transaction]['total_quantity']));
+            dayTotals[thisTransDate.getDate()+1] = dict[transaction]['total_quantity']; //set the next daysTotals to this transaction total quantity
+            continue;
           }
-          x++
+          else {  //first ever transaction for this coin
+            console.log("Day: " + String(thisTransDate.getDate()) + " Total: 0"); //this transaction doesn't take affect until the next day
+            dayTotals[thisTransDate.getDate()] = 0;
+            //console.log("Day: " + String(thisTransDate.getDate()+1) + " Total: " + String(dict[transaction]['total_quantity']));
+            //dayTotals[thisTransDate.getDate()+1] = dict[transaction]['total_quantity'];
+            i = thisTransDate.getDate()+1;
+            continue;
+          }
         }
-      }
-      else{  //there's more transactions for this symbol in this month
-        while ( x <= nextTransDate){  //only process dates leading up to the day of next transaction
-        console.log("Day: " + String(x) + " Total: " + rngA[i][5])
-        dayTotals[x] = rngA[i][5]
-        x++
+        else {
+          if (x>1){
+            console.log("Day: " + String(thisTransDate.getDate()) + " Total: " + String(dict[transaction - 1]['total_quantity'])); //this transaction doesn't take affect until the next day
+            dayTotals[thisTransDate.getDate()] = dict[transaction - 1]['total_quantity'];
+            console.log("Day: " + String(thisTransDate.getDate()+1) + " Total: " + String(dict[transaction]['total_quantity']));
+            dayTotals[thisTransDate.getDate()+1] = dict[transaction]['total_quantity'];
+            i = thisTransDate.getDate()+1
+          }
+          else {
+            i = 1;
+            while (i <= thisTransDate.getDate()){ //today){
+              console.log("Day: " + String(i) + " Total: " + String(dict[transaction - 1]['total_quantity']));
+              dayTotals[i] = dict[transaction - 1]['total_quantity']; //total_quantity;
+              i++;
+            }
+          }
+          //Logger.log(Object.keys(dict).length)
+          if(transaction != Object.keys(dict).length - 1){
+            continue
+          }
         }
+        //i = thisTransDate.getDate()
+        /*
+        while (i <= thisTransDate.getDate()){ //today){
+          dayTotals[i] = dayTotals[i-1]//total_quantity;
+          i++
+        }
+        */
       }
     }
+  }
+  i=1
+  while (i <= lastDayOfThisMonth){ // thisTransDate.getDate()){ //today){
+    if (dayTotals[i] == undefined){
+      if (dayTotals[i-1] != undefined){
+        console.log("Day: " + String(i) + " Total: " + String(dayTotals[i-1]));
+        dayTotals[i] = dayTotals[i-1]//total_quantity;
+      }
+    }
+    i++
   }
 
   if (dayTotals.length == 0){ //No transactions found for the month. Get latest total quantity and carry it forward
-    i = rngA.length-1
-    while (rngA[i][1].indexOf(sym)<0){
-      i--
-      dayTotals[0] = rngA[i][5]
-    }
+    console.log("No trades this month for " + sym + ". Carrying forward total: " + String(dict[transaction]['total_quantity']));
+    aveDailyBal = dict[transaction]['total_quantity'];
   }
-
-
-
-  if (dayTotals.length == 1){
-    console.log("Monthly ave balance calculate as: " + String(dayTotals[0]))
-    aveDailyBal = dayTotals[0]
+  else if (dayTotals.length == 1){
+    console.log("Monthly ave balance for " + sym + " calculated as: " + String(dayTotals[1]))
+    aveDailyBal = dayTotals[1]
   }
   else{
-    console.log("Monthly ave balance calculate as: " + String(dayTotals.reduce((a, b) => a + b, 0) / (x-1)))
-    aveDailyBal = dayTotals.reduce((a, b) => a + b, 0) / (x-1)
+    console.log("Monthly ave balance for " + sym + " calculated as: " + String(dayTotals.reduce((a, b) => a + b, 0) / (dayTotals.length)))
+    aveDailyBal = dayTotals.reduce((a, b) => a + b, 0) / (dayTotals.length)
   }
 
   return aveDailyBal;
@@ -367,8 +299,8 @@ function buildCurrentMarket(coins){
       currentMarket.getRange('A' + String(row)).setValue(coin);
       row = row+8;
     }
-    resizeAllColumns();
   }
+  resizeAllColumns();
 }
 
 function buildCoinForecast(coins){

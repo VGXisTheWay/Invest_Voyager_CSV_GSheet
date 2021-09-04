@@ -2,7 +2,7 @@ function areYouSureClearSheet(){
   var buttonSet = SpreadsheetApp.getUi().ButtonSet;
   response = alertUser(
     "⚠️ Are you sure?",
-    "This action will erase the active sheet!",
+    "This action will OVERWRITE the Voyager CSV sheet!",
     buttonSet.YES_NO_CANCEL
   );
   return response

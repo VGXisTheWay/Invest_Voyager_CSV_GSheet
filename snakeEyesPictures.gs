@@ -22,11 +22,8 @@ function displayHeroImg(imgNum){
 
   var blob = loadImageBytes(imgID);
   html="<p style='display:flex; justify-content:center;'> <img src='data:image/jpg;base64,"+ blob + "' style='max-width:95vw; max-height:85vh; width:auto;height:auto;'/></p>";
-  //output.setContent(html);
-  //output.setWidth(600);
-  //output.setHeight(600);
 
-  return html; //output;
+  return html;
 }
 
 function getHeroImageIDs() { //save image blobs to global for fast fetching later
