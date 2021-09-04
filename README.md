@@ -8,7 +8,7 @@ How to use:
 
 	a. Email must be in your gmail, from "taxes@investvoyager.com", and starred.
 	
-	b. Dummy Data can be chosen here if the correct email is not found.
+		1. Dummy Data can be chosen here if the correct email is not found.
 
 
 
