@@ -3,7 +3,7 @@
 How to use:
 1. Create Google Sheet, select Tool -> Script Editor, and copy all of the scripts over.
 2. On left of Script Editor select Add Services: Gmail, Drive, Docs, Sheets.
-3. Save, close, and reopen the sheet.
+3. Save and then refresh page.
 4. In the #VGXHeroes menu choose how to import your CSV.
 
 	a. Email must be in your gmail, from "taxes@investvoyager.com", and starred.
