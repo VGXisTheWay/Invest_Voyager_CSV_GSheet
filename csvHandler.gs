@@ -109,27 +109,33 @@ function buildVoyagerCSVSheet(data) {
   transactions = voyager_csv_sheet_to_dictionary(true);
 
   htmlPopUp('<b>Processed ' +
-                  String(rngA.length) + "/" + String(rngA.length) +
-                  ' Transactions </b><br><br>' +
-                  displayHeroImg(randomIntFromInterval(0,250)),
-                  'Building Current Market Sheet...'
-                );
-
-  buildCurrentMarket(transactions);
-  htmlPopUp('<b>Processed ' +
-                  String(rngA.length) + "/" + String(rngA.length) +
-                  ' Transactions </b><br><br>' +
-                  displayHeroImg(randomIntFromInterval(0,250)),
-                  'Building Coin Forecast Sheet...'
-                );
-  buildCoinForecast(transactions);
-  htmlPopUp('<b>Processed ' +
     String(rngA.length) + "/" + String(rngA.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Building Gains Sheet...'
   );
   buildGainsSheet(transactions);
+  htmlPopUp('<b>Processed ' +
+    String(rngA.length) + "/" + String(rngA.length) +
+    ' Transactions </b><br><br>' +
+    displayHeroImg(randomIntFromInterval(0,250)),
+    'Building Current Market Sheet...'
+  );
+  buildCurrentMarketSheet(transactions);
+  htmlPopUp('<b>Processed ' +
+    String(rngA.length) + "/" + String(rngA.length) +
+    ' Transactions </b><br><br>' +
+    displayHeroImg(randomIntFromInterval(0,250)),
+    'Building Coin Forecast Sheet...'
+  );
+  buildCoinForecastSheet(transactions);
+  htmlPopUp('<b>Processed ' +
+    String(rngA.length) + "/" + String(rngA.length) +
+    ' Transactions </b><br><br>' +
+    displayHeroImg(randomIntFromInterval(0,250)),
+    'Building Gains Forecast Table...'
+  );
+  buildGainsForecastTable();
 
   htmlPopUp('<b>Processed ' +
     String(rngA.length) + "/" + String(rngA.length) +
@@ -159,6 +165,8 @@ function buildVoyagerCSVSheet(data) {
   Logger.log("Total USD:" + String(transactions["USD"]['TotalQty']) + ", total sold:" + String(transactions['total_sold_in_USD']) + ", bought:" + String(total_bought));
   var usdTotal = transactions["USD"]['TotalQty'] + transactions['total_sold_in_USD'] - total_bought;
   usdTotal = usdTotal.toFixed(2);
+
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Gains').activate(); //Activate Gains Sheet
 
   status = status + "<br>USD: " + String(usdTotal);
   status = status + "<br><br>TOTAL INTEREST: " + String(transactions['total_interest']);
