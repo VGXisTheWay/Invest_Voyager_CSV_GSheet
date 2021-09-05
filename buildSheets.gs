@@ -1,7 +1,8 @@
 function buildGainsSheet(transactions){
+  transactions = voyager_csv_sheet_to_dictionary(false);
   var gainsSheet = createSheet('Gains');
   var activeRange = SpreadsheetApp.getActiveRange();
-  var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned"];
+  var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned", "Refresh Data"];
   var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
   var i = 0;
   var transactionsVGX_length = 0;
@@ -18,6 +19,7 @@ function buildGainsSheet(transactions){
   voyagerInterest = new Array;
 
   var row = 2;
+  gainsSheet.getRange(row,14).insertCheckboxes(false); //checkbox acts as toggle which refreshes current market importHTML() formulas
   for([coin, value] of Object.entries(transactions)){
     if (coin != "USD"){
       gainsSheet.getRange(row,1).setValue(coin);
@@ -25,19 +27,20 @@ function buildGainsSheet(transactions){
       if(["BTC", "ETH", "USDC"].includes(coin)){
         gainsSheet.getRange(row,2).setFormula("=IFS(INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>20000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.5%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>5000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.0%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>500,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+0.5%)");
         transactionsVGX_length = Object.keys(transactions['VGX']).length-1;
-        if(transactions['VGX'][transactionsVGX_length]['total_quantity']>500){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Adventurer! 0.5% BOOST');
+        if(5000 > transactions['VGX'][transactionsVGX_length]['total_quantity'] > 500){
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Adventurer! 0.5% BOOST').setFontColor('purple');
         }
-        else if(transactions['VGX'][transactionsVGX_length]['total_quantity']>5000){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Explorer! 1% BOOST');
+        else if(20000 > transactions['VGX'][transactionsVGX_length]['total_quantity'] > 5000){
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Explorer! 1% BOOST').setFontColor('purple');
         }
         else if(transactions['VGX'][transactionsVGX_length]['total_quantity']>20000){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Navigator! 1.5% BOOST');
+          gainsSheet.getRange("B"+String(row)).setNote('Congrats Navigator! 1.5% BOOST').setFontColor('purple');
         }
       }
       else{
         gainsSheet.getRange(row,2).setFormula("=SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(" + '"*' + coin + '*"' + ",'Voyager Interest'!$C:$C,0),1)," + '"*"' + ',"")');
       }
+      gainsSheet.getRange(row,2).setNumberFormat("#0.00%");
       //Quantity
       gainsSheet.getRange(row,3).setFormula("=SUM(SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," +'"Buy"' + ")+SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"deposit"' + ")-SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"Sell"))');
       //Average Daily
@@ -51,7 +54,7 @@ function buildGainsSheet(transactions){
       //7-Day Price Graph
       gainsSheet.getRange(row,8).setFormula('=SPARKLINE(CRYPTOFINANCE("' + coin + '", "sparkline"))');
       //Current Price
-      gainsSheet.getRange(row,9).setFormula("=INDEX('Current Market'!$A:$C,MATCH(" + '"' + coin + '"' + ",'Current Market'!$A:$A,0),3)");
+      gainsSheet.getRange(row,9).setFormula("=INDEX('Current Market'!$A:$C,MATCH(" + '"' + coin + '"' + ",'Current Market'!$A:$A,0),3)").setNumberFormat("$#,##0.00;$(#,##0.00)");
       //Current Value
       gainsSheet.getRange(row,10).setFormula('$C'+row+'*$I'+row);
       //$ Gain
@@ -61,6 +64,7 @@ function buildGainsSheet(transactions){
       gainsSheet.getRange(row,12).setNumberFormat("##%");
       //Total Interest Earned
       gainsSheet.getRange(row,13).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"'  + ",'Voyager CSV'!$D:$D," + '"=INTEREST")');
+      var lastGainsTableRow = row
       row += 1;
     }
   }
@@ -74,6 +78,7 @@ function buildGainsSheet(transactions){
     }
     i+=1;
   }
+  setAlternatingColors("$A2:$M" + String(row-1));
   gainsSheet.getRange(row,5).setFormula(expectedInterest).setFontWeight('bold').setFontSize(12).setNumberFormat("$#,##0.00;$(#,##0.00)");
   //Sum Total Cost Column
   gainsSheet.getRange(row,7).setFormula("=SUMIF(G2:G" +String(row-1)+",\"<>#DIV/0!\",G2:G"+String(row-1)+")").setFontWeight('bold').setFontSize(12);
@@ -89,11 +94,82 @@ function buildGainsSheet(transactions){
   gainsSheet.getRange("M:M").setNumberFormat("$#,##0.00;$(#,##0.00)");
   //Set Interest column to center
   gainsSheet.getRange("B:B").setHorizontalAlignment('center');
-  //Forcast Value 2021
-    //gainsSheet.getRange(row,12).setFormula('=SUBSTITUTE(INDEX("Coin Forecast"!$A:$E,MATCH("'+coin+'","Coin Forecast"!$A:$A,0)+1,4), "*","")'); //+2,4 for 2022 etc.
+  row+=3
+
+  //TODO Conditional Formatting Rules
+
+  //Forcast Table
+  gainsSheet.getRange(row,1).setValue("Forecast Table").setFontWeight('bold'); //Forecast Table Title
+  row+=1;
+  var forecastHeaders = ["Coin", "Date", "Forecasted Price", 'Current Qty', "Total Cost", "Forecasted Value", "$ Gain", "% Gain", "Total Value"];
+  var forecastHeaderRange = gainsSheet.getRange(row,1,1,forecastHeaders.length);
+  i = 0;
+  for (header in forecastHeaders){
+    gainsSheet.getRange(row,i+1).setValue(forecastHeaders[i]);
+    i += 1;
+  }
+  with (forecastHeaderRange){
+    setBackgroundRGB(119,136,153);
+    setFontWeight('bold');
+    setHorizontalAlignment('center');
+    setWrap(true);
+  }
+  row+=1;
+
+  var forecastCoins = getCoinsWithForecast();
+  var forecastDates = {Dec_2021:"+1,4), \"*\",\"\")", Dec_2022:"+2,4), \"*\",\"\")", Dec_2023:"+3,4), \"*\",\"\")", Dec_2024:"+4,4), \"*\",\"\")", Dec_2025:"+5,4), \"*\",\"\")"};
+  var yearStartRow = "";
+
+  for([date, value] of Object.entries(forecastDates)){
+    gainsSheet.getRange(row,1).setValue(date).setFontWeight('bold');
+    row+=1;
+    yearStartRow = String(row-1); //record first row of this year forecast
+    for (i in forecastCoins){
+      buildForcastedGainsTable(gainsSheet, date, forecastCoins[i], value, String(row), String(lastGainsTableRow));
+      row+=1;
+    }
+    gainsSheet.getRange(row-1,9).setFormula("=SUM($F"+yearStartRow+":$F"+String(row-1)+")").setNumberFormat("$#,##0.00;$(#,##0.00)").setFontWeight('bold');
+    row+=1;
+    setAlternatingColors("$A" + yearStartRow + ":$I" + String(row-2));
+  }
   resizeAllColumns();
 }
 
+function setAlternatingColors(range) {
+  Logger.log(range.toString());
+  var bandingTheme = [SpreadsheetApp.BandingTheme.BLUE, SpreadsheetApp.BandingTheme.BROWN, SpreadsheetApp.BandingTheme.CYAN,SpreadsheetApp.BandingTheme.GREEN,SpreadsheetApp.BandingTheme.GREY,SpreadsheetApp.BandingTheme.INDIGO,SpreadsheetApp.BandingTheme.LIGHT_GREEN,SpreadsheetApp.BandingTheme.LIGHT_GREY,SpreadsheetApp.BandingTheme.ORANGE,SpreadsheetApp.BandingTheme.PINK,SpreadsheetApp.BandingTheme.TEAL,SpreadsheetApp.BandingTheme.YELLOW]
+  let randomBandingTheme = bandingTheme[Math.floor(Math.random() * bandingTheme.length)];
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var range = ss.getRange(range);
+  // first remove any existing alternating colors in range to prevent error "Exception: You cannot add alternating background colors to a range that already has alternating background colors."
+  range.getBandings().forEach(banding => banding.remove());
+  // apply alternate background colors
+  range.applyRowBanding(randomBandingTheme, false, false);
+}
+
+function getCoinsWithForecast(){
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  var values = sheet.getSheetByName('Coin Forecast').getDataRange().getValues();
+  var cellValues = [];
+  var i=0;
+  for(n=0;n<values.length;++n){
+    cellValues[i] = values[n][0];
+    i+=1;
+  }
+  cellValues = cellValues.filter(Boolean);
+  return cellValues;
+}
+
+function buildForcastedGainsTable(sheet, date, coin, dateFormula, row, lastGainsTableRow){
+  sheet.getRange(row,1).setValue(coin); //coin name
+  sheet.getRange(row,2).setValue(date); //forecast date
+  sheet.getRange(row,3).setFormula("=SUBSTITUTE(INDEX('Coin Forecast'!$A:$E,MATCH(\""+coin+"\",'Coin Forecast'!$A:$A,0)" + dateFormula); //Formula gets forcasted price for date
+  sheet.getRange(row,4).setFormula("=VLOOKUP(\""+coin+"\",$A$2:$M$"+lastGainsTableRow+", 3, False)"); //Qty
+  sheet.getRange(row,5).setFormula("=VLOOKUP(\""+coin+"\",$A$2:$M$"+lastGainsTableRow+", 7, False)").setNumberFormat("$#,##0.00;$(#,##0.00)"); //Total Cost
+  sheet.getRange(row,6).setFormula("C"+row+"*D"+row).setNumberFormat("$#,##0.00;$(#,##0.00)"); //Forecasted Value (Forcasted Price * Qty)
+  sheet.getRange(row,7).setFormula("F"+row+"-E"+row).setNumberFormat("$#,##0.00;$(#,##0.00)"); //$ Gains (Forecasted Value - Total Cost)
+  sheet.getRange(row,8).setFormula("F"+row+"/E"+row+"*1").setNumberFormat("#0.00%"); //% Gains (Forecasted Value / Total Cost * 1)
+}
 // Calculate average balance for this month
 function getAveBal(sym){
   //var sym = "BTT";
@@ -295,7 +371,7 @@ function buildCurrentMarket(coins){
     if (coin != 'total_interest' && coin != 'USD'){
       Logger.log(coin);
       url = rowOfCoin(coin, 'current market');
-      currentMarket.getRange('B' + String(row)).setValue('=IMPORTHTML("'+url+'","table", 1)');
+      currentMarket.getRange('B' + String(row)).setValue('=IMPORTHTML("'+url+'","table", 1, \'Gains\'!$N$2)');
       currentMarket.getRange('A' + String(row)).setValue(coin);
       row = row+8;
     }
