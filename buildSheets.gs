@@ -4,7 +4,7 @@
  * @customfunction
  */
 function buildGainsSheet(transactions){
-  transactions = voyager_csv_sheet_to_dictionary(false);
+  //transactions = voyager_csv_sheet_to_dictionary(false);
   var gainsSheet = createSheet('Gains');
   var activeRange = SpreadsheetApp.getActiveRange();
   var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned", "Refresh Data"];

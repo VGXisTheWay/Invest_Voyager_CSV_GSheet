@@ -58,7 +58,7 @@ function importVoyagerCSVgmail(){
 }
 
 function importDummyVoyagerCSV(sheet){
-  csvData = dummyVoyagerCSV();
+  csvData = dummyVoyagerCSV(25); //imports 25 rows of random dummy CSV data
   Logger.log(csvData)
   dummySheet = createSheet('Voyager CSV')
   //sheet.clearContents().clearFormats();
@@ -363,21 +363,71 @@ function resizeAllColumns () {
   sheet.autoResizeColumns(firstColumn, lastColumn);
 }
 
-function dummyVoyagerCSV() {
-  dummyCSV =  'transaction_date,transaction_id,transaction_direction,transaction_type,base_asset,quote_asset,quantity,net_amount,price' +
-              '\r\n2019-01-01 01:00:00.000000+00:00,USD123456,Buy,TRADE,USD,USD,63025,1.00,1.00' +
-              '\r\n2020-01-01 01:00:00.000000+00:00,BTC1234567,Buy,TRADE,BTC,USD,0.01,450.00,45000.00' +
-              '\r\n2020-02-01 01:00:00.000000+00:00,BTC7891011,Buy,TRADE,BTC,USD,0.5,15000.00,30000.00' +
-              '\r\n2020-01-02 01:00:00.000000+00:00,ADA1234567,Buy,TRADE,ADA,USD,1000,1500.00,1.50' +
-              '\r\n2020-02-02 01:00:00.000000+00:00,ADA2468012,Buy,TRADE,ADA,USD,100,125.00,1.25' +
-              '\r\n2020-01-03 01:00:00.000000+00:00,STEVE42691,Buy,TRADE,VGX,USD,1000,2000.00,2.00' +
-              '\r\n2020-02-04 01:00:00.000000+00:00,STEVE2MOON,Buy,TRADE,VGX,USD,15000,33750.00,2.25' +
-              '\r\n2020-02-04 01:10:00.000000+00:00,STMX123456,Buy,TRADE,STMX,USD,400000,25000.00,0.025' +
-              '\r\n2020-03-01 01:10:00.000000+00:00,VGXINT1234,deposit,INTEREST,VGX,N/A,25,87.50,3.50' +
-              '\r\n2020-03-02 01:15:00.000000+00:00,DOT1234545,Buy,TRADE,DOT,USD,10,200.00,20.00';
+/** Builds Voyager CSV sheet with DUMMY data
+ *
+ * @param {number} numberOfRows Number of rows of data to generate
+ * @customfunction
+ */
+function dummyVoyagerCSV(numberOfRows = 10) {
+  var date = new Date();
+  var startDate = new Date(2018,0,1);
+  var endDate = new Date();
+  var transactionID = "";
+  var transactionDirection = ['Buy', 'Sell', 'deposit'];
+  var transactionType = ['TRADE','INTEREST','BANK','REWARD', 'ADMIN'];
+  var baseAssets = ['ADA', 'BTC', 'VGX', 'STMX', 'DOT', 'USD'];
+  var qty = 0;
+  var netAmt = 0;
+  var price = 0;
+  var dummyHeaderCSV =  'transaction_date,transaction_id,transaction_direction,transaction_type,base_asset,quote_asset,quantity,net_amount,price';
+  var dummyDataCSV = "";
 
+  for(let i =0; i < numberOfRows; i++){
+    date = new Date(+startDate + Math.random() * (endDate - startDate)).toISOString();
+    transactionID = makeid(10);
+    let randomTransactionDirection = transactionDirection[Math.floor(Math.random() * transactionDirection.length)];
+    let randomTransactionType = transactionType[Math.floor(Math.random() * transactionType.length)];
+    let randomBaseAsset = baseAssets[Math.floor(Math.random() * baseAssets.length)];
+    qty = (Math.random() * 1000) + 1;
 
-  dummyData = Utilities.parseCsv(dummyCSV, ",");
+    if (randomBaseAsset == 'ADA'){
+      price = (Math.random() * 3) + 0.10;
+    } else if (randomBaseAsset == 'BTC'){
+      price = (Math.random() * 60000) + 10000;
+    } else if (randomBaseAsset == 'VGX'){
+      price = (Math.random() * 4) + 0.01;
+    } else if (randomBaseAsset == 'STMX'){
+      price = (Math.random() * 0.09) + 0.001;
+    } else if (randomBaseAsset == 'DOT'){
+      price = (Math.random() * 35) + 15;
+    } else if (randomBaseAsset == 'USD'){
+      price = 1;
+    }
+
+    dummyDataCSV = dummyDataCSV + '\r\n' + date.toString() + ',' + transactionID + ',' + randomTransactionDirection + ',' + randomTransactionType + "," + randomBaseAsset + ',USD,' + String(qty) + ',' + String(price) + ',' + String(qty*price);
+  }
+
+  dummyDataCSV = dummyHeaderCSV + dummyDataCSV;
+  Logger.log(dummyDataCSV)
+  dummyData = Utilities.parseCsv(dummyDataCSV, ",");
   Logger.log(dummyData);
   return dummyData;
+}
+
+function randomDate(start, end, startHour, endHour) {
+  var date = new Date(+start + Math.random() * (end - start));
+  var hour = startHour + Math.random() * (endHour - startHour) | 0;
+  date.setHours(hour);
+  return date;
+}
+
+function makeid(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() *
+ charactersLength));
+   }
+   return result;
 }
