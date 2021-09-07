@@ -4,9 +4,8 @@
  * @customfunction
  */
 function buildGainsSheet(transactions){
-  //transactions = voyager_csv_sheet_to_dictionary(false);
+  //transactions = voyager_csv_sheet_to_dictionary(false);  //use for debugging only
   var gainsSheet = createSheet('Gains');
-  var activeRange = SpreadsheetApp.getActiveRange();
   var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned", "Refresh Data"];
   var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
   var i = 0;
@@ -49,15 +48,15 @@ function buildGainsSheet(transactions){
       //Quantity
       gainsSheet.getRange(row,3).setFormula("=SUM(SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," +'"Buy"' + ")+SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"deposit"' + ")-SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"*' + coin + '*"' + ",'Voyager CSV'!$C:$C," + '"Sell"))');
       //Average Daily
-      gainsSheet.getRange(row,4).setFormula('=getAveBal($A'+row+')');
+      gainsSheet.getRange(row,4).setFormula('=getAveBal($A'+row+', $N$2)');
       //Expected Interest
-      gainsSheet.getRange(row,5).setFormula('=IF(C'+row+'<>"#N/A",$D'+row+'*$B'+row+'/12)');
+      gainsSheet.getRange(row,5).setFormula('=IFS($D'+row+'<INDEX(SPLIT(SUBSTITUTE(INDEX(\'Voyager Interest\'!$B:$C,MATCH("*'+coin+'*",\'Voyager Interest\'!$C:$C,0),2),"*","")," "),0,1), "Ave Too Low", C'+row+'<>"#N/A",$D'+row+'*$B'+row+'/12)').setHorizontalAlignment('center');
       //Ave Cost Per Coin
-      gainsSheet.getRange(row,6).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ",'Voyager CSV'!$D:$D," + '"<>REWARD"' + ")/SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ", 'Voyager CSV'!$D:$D," + '"<>REWARD")');
+      gainsSheet.getRange(row,6).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ",'Voyager CSV'!$D:$D," + '"<>REWARD"' + ")/SUMIFS('Voyager CSV'!$G:$G,'Voyager CSV'!$E:$E," + '"' + coin + '"' + ", 'Voyager CSV'!$D:$D," + '"<>REWARD")').setNumberFormat("$#,##0.000;$(#,##0.000)");
       //Total Cost
       gainsSheet.getRange(row,7).setFormula('$C'+row+'*$F'+row);
       //7-Day Price Graph
-      gainsSheet.getRange(row,8).setFormula('=SPARKLINE(CRYPTOFINANCE("' + coin + '", "sparkline"))');
+      gainsSheet.getRange(row,8).setFormula('=SPARKLINE(CRYPTOFINANCE("' + coin + '", "sparkline",,$N$2))');
       //Current Price
       gainsSheet.getRange(row,9).setFormula("=INDEX('Current Market'!$A:$C,MATCH(" + '"' + coin + '"' + ",'Current Market'!$A:$A,0),3)").setNumberFormat("$#,##0.00;$(#,##0.00)");
       //Current Value
@@ -69,16 +68,15 @@ function buildGainsSheet(transactions){
       gainsSheet.getRange(row,12).setNumberFormat("##%");
       //Total Interest Earned
       gainsSheet.getRange(row,13).setFormula("=SUMIFS('Voyager CSV'!$H:$H,'Voyager CSV'!$E:$E," + '"' + coin + '"'  + ",'Voyager CSV'!$D:$D," + '"=INTEREST")');
-      //var lastGainsTableRow = row
       row += 1;
     }
   }
   //Set cells that show column totals
   //Sum Expected Interest
   i=2; //start at row 2 because row 1 is headers
-  expectedInterest = "=0"
+  expectedInterest = "=0";
   while (i<row){
-    if (gainsSheet.getRange(i,5).getValue() != "#N/A"){ //skips coins that don't earn interest
+    if (isNaN(gainsSheet.getRange(i,5).getValue()) == false){ //skips coins that don't have an expected interest earning
       expectedInterest = expectedInterest + "+(E" + String(i) + "* I" + String(i) + ")"; //add (multiply Ave Daily by Current Price)
     }
     i+=1;
@@ -314,46 +312,6 @@ function getAveBal(sym){
   }
 
   return aveDailyBal;
-}
-
-/** Creates a string of random letters at a set length.
- *
- * @param {number} len The total number of random letters in the string.
- * @param {number} num What type of random number 0. Alphabet with Upper and Lower. 1.Alphanumeric 2. Alphanumeric + characters
- * @return an array of random letters
- * @customfunction
- */
-function RANDALPHA(len, num) {
-  var text = "";
-
-  //Check if numbers
-  if(typeof len !== 'number' ||  typeof num !== 'number'){return text = "NaN"};
-
-  var charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/+";
-  var charStringRange
-  switch (num){
-     case 0:
-       //Alphabet with upper and lower case
-       charStringRange = charString.substr(0,52);
-       break;
-     case 1:
-       //Alphanumeric
-       charStringRange = charString.substr(0,62);
-       break;
-     case 2:
-       //Alphanumeric + characters
-       charStringRange = charString;
-       break;
-     default:
-       //error reporting
-       return text = "Error: Type choice > 2"
-
-  }
-  //
-  for (var i = 0; i < len; i++)
-    text += charStringRange.charAt(Math.floor(Math.random() * charStringRange.length));
-
-  return text;
 }
 
 /**
