@@ -1,6 +1,7 @@
 function importVoyagerCSVgmail(){
   var sheet = SpreadsheetApp.getActiveSheet();
   var buttonSet = SpreadsheetApp.getUi().ButtonSet;
+  var csvData = {};
   response = areYouSureClearSheet();
   if (response == true){
     try{
@@ -58,23 +59,16 @@ function importVoyagerCSVgmail(){
 }
 
 function importDummyVoyagerCSV(sheet){
-  csvData = dummyVoyagerCSV(25); //imports 25 rows of random dummy CSV data
+  csvData = dummyVoyagerCSV(100); //imports 25 rows of random dummy CSV data
   Logger.log(csvData)
   dummySheet = createSheet('Voyager CSV')
-  //sheet.clearContents().clearFormats();
-  //dummySheet.getRange("A1").setValue("DUMMY DATA");
   dummySheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
   resizeAllColumns();
-  //sheet.setName('DUMMY Voyager CSV');
   return csvData
 }
 
 function buildVoyagerCSVSheet(data) {
-  //var sheet = SpreadsheetApp.getActiveSheet();
-  //var transactions = {};
-  //var transaction_id = '';
-  var base_asset = '';
-  var i = 0;
+  //var i = 0;
 
   var s = SpreadsheetApp.getActiveSpreadsheet();
   var voyager_CSV_Sheet = s.getSheetByName('Voyager CSV');
@@ -190,7 +184,6 @@ function voyager_csv_sheet_to_dictionary(showHeroPictures=false){
   var rngA = rng.getValues();//Array of input values
   var transactions ={};
   var i = 0;
-  var total_quantity = 0;
 
   var x = 0
   for([transaction, dict] of Object.entries(rngA)){ //build dictionary of coins
@@ -375,7 +368,7 @@ function dummyVoyagerCSV(numberOfRows = 10) {
   var transactionID = "";
   var transactionDirection = ['Buy', 'Sell', 'deposit'];
   var transactionType = ['TRADE','INTEREST','BANK','REWARD', 'ADMIN'];
-  var baseAssets = ['ADA', 'BTC', 'VGX', 'STMX', 'DOT', 'USD'];
+  var baseAssets = ['ADA', 'BTC', 'ETH', 'SOL', 'STMX', 'DOT', 'USD', 'USDC', 'VET', 'VGX'];
   var qty = 0;
   var netAmt = 0;
   var price = 0;
@@ -388,20 +381,32 @@ function dummyVoyagerCSV(numberOfRows = 10) {
     let randomTransactionDirection = transactionDirection[Math.floor(Math.random() * transactionDirection.length)];
     let randomTransactionType = transactionType[Math.floor(Math.random() * transactionType.length)];
     let randomBaseAsset = baseAssets[Math.floor(Math.random() * baseAssets.length)];
-    qty = (Math.random() * 1000) + 1;
+    if (randomTransactionDirection == 'Sell'){ //reduce odds of having more sold than bought
+      qty = (Math.random() * 10) + 1;
+    } else {
+      qty = (Math.random() * 1000) + 1;
+    }
 
     if (randomBaseAsset == 'ADA'){
       price = (Math.random() * 3) + 0.10;
     } else if (randomBaseAsset == 'BTC'){
       price = (Math.random() * 60000) + 10000;
-    } else if (randomBaseAsset == 'VGX'){
-      price = (Math.random() * 4) + 0.01;
+    } else if (randomBaseAsset == 'ETH'){
+      price = (Math.random() * 3850.50) + 1805.25;
+    } else if (randomBaseAsset == 'SOL'){
+      price = (Math.random() * 205.13) + 20.38;
     } else if (randomBaseAsset == 'STMX'){
       price = (Math.random() * 0.09) + 0.001;
     } else if (randomBaseAsset == 'DOT'){
       price = (Math.random() * 35) + 15;
     } else if (randomBaseAsset == 'USD'){
       price = 1;
+    } else if (randomBaseAsset == 'USDC'){
+      price = 1;
+    } else if (randomBaseAsset == 'VET'){
+      price = (Math.random() * .14) + .05608;
+    } else if (randomBaseAsset == 'VGX'){
+      price = (Math.random() * 4) + 0.01;
     }
 
     dummyDataCSV = dummyDataCSV + '\r\n' + date.toString() + ',' + transactionID + ',' + randomTransactionDirection + ',' + randomTransactionType + "," + randomBaseAsset + ',USD,' + String(qty) + ',' + String(price) + ',' + String(qty*price);

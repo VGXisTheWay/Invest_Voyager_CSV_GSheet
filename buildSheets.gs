@@ -4,7 +4,7 @@
  * @customfunction
  */
 function buildGainsSheet(transactions){
-  //transactions = voyager_csv_sheet_to_dictionary(false);  //use for debugging only
+  transactions = voyager_csv_sheet_to_dictionary(false);
   var gainsSheet = createSheet('Gains');
   var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned", "Refresh Data"];
   var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
@@ -211,11 +211,11 @@ function getCoinsWithForecast(){
  * @customfunction
  */
 function getAveBal(sym){
-  //var sym = "BTT";
+  //var sym = "STMX";
   var currentMonth = new Date().getMonth();
   var date = new Date();
   var lastDayOfThisMonth = new Date(date.getFullYear(), currentMonth+1, 0).getDate();
-  var today = date.getDate();
+  var currentYear = date.getFullYear();
   var dayTotals = [];
   var aveDailyBal;
   var i = 0;
@@ -224,20 +224,15 @@ function getAveBal(sym){
   var transactions = voyager_csv_sheet_to_dictionary(false);
   var transaction;
   var transaction_value;
-  var coin;
   var dict = transactions[sym];
   var total_quantity = 0;
-  /*
-  function orderBySubKey( input, key ) {
-    return Object.values( input ).map( value => value ).sort( (a, b) => a[key] - b[key] );
-  }
-  var newdict = orderBySubKey(dict,'transaction_date')*/
+
   for ([transaction, transaction_value] of Object.entries(dict)){
     if (transaction_value != 'total_quantity'){
       transaction = parseInt(transaction);
       thisTransDate = new Date(transaction_value['transaction_date']);
       total_quantity = total_quantity + transaction_value['quantity'];
-      if (thisTransDate.getMonth() == currentMonth){
+      if (thisTransDate.getMonth() == currentMonth && thisTransDate.getFullYear() == currentYear){ //only average transactions from this month/year
         x+=1;
         if (thisTransDate.getDate() == 1){ //Transaction ocurred on the 1st so yesterday's total is today's.
           if (dict[transaction - 1] != undefined){ //make sure this isn't the first time this coin has been seen
@@ -255,6 +250,14 @@ function getAveBal(sym){
             i = thisTransDate.getDate()+1;
             continue;
           }
+        }
+        else if (dict[transaction -1] == undefined){  //first ever transaction for this coin
+            console.log("Day: " + String(thisTransDate.getDate()) + " Total: 0"); //this transaction doesn't take affect until the next day
+            dayTotals[thisTransDate.getDate()] = 0;
+            console.log("Day: " + String(thisTransDate.getDate()+1) + " Total: " + String(dict[transaction]['total_quantity']));
+            dayTotals[thisTransDate.getDate()+1] = dict[transaction]['total_quantity'];
+            i = thisTransDate.getDate()+2;
+            continue;
         }
         else {
           if (x>1){
@@ -277,28 +280,26 @@ function getAveBal(sym){
             continue
           }
         }
-        //i = thisTransDate.getDate()
-        /*
-        while (i <= thisTransDate.getDate()){ //today){
-          dayTotals[i] = dayTotals[i-1]//total_quantity;
-          i++
-        }
-        */
       }
     }
   }
   i=1
-  while (i <= lastDayOfThisMonth){ // thisTransDate.getDate()){ //today){
-    if (dayTotals[i] == undefined){
-      if (dayTotals[i-1] != undefined){
+  while (i <= lastDayOfThisMonth){
+    if (dayTotals[i] == undefined){ //No quantity recorded for this day
+      if (dayTotals[i-1] != undefined){ //checks if day prior had a quantity
         console.log("Day: " + String(i) + " Total: " + String(dayTotals[i-1]));
-        dayTotals[i] = dayTotals[i-1]//total_quantity;
+        dayTotals[i] = dayTotals[i-1]
+      } else { //No previous total to carry forward, this day is counted as 0
+        console.log("Day: " + String(i) + " Total: 0");
+        dayTotals[i] = 0;
       }
+    } else {
+      console.log("Day: " + String(i) + " Total: " + String(dayTotals[i]));
     }
     i++
   }
 
-  if (dayTotals.length == 0){ //No transactions found for the month. Get latest total quantity and carry it forward
+  if (dayTotals[dayTotals.length - 1] == 0){ //No transactions found for the month. Get latest total quantity and carry it forward
     console.log("No trades this month for " + sym + ". Carrying forward total: " + String(dict[transaction]['total_quantity']));
     aveDailyBal = dict[transaction]['total_quantity'];
   }
@@ -526,6 +527,7 @@ function buildCoinURLsSheet(){
     OXT:{coinMarketCap:'https://coinmarketcap.com/currencies/orchid/', coinPriceForcast:''},
     QTUM:{coinMarketCap:'https://coinmarketcap.com/currencies/qtum/', coinPriceForcast:''},
     SHIB:{coinMarketCap:'https://coinmarketcap.com/currencies/shiba-inu/', coinPriceForcast:'https://coinpriceforecast.com/shib'},
+    SOL:{coinMarketCap:'https://coinmarketcap.com/currencies/solana', coinPriceForcast:'https://coinpriceforecast.com/solana'},
     SRM:{coinMarketCap:'https://coinmarketcap.com/currencies/serum/', coinPriceForcast:''},
     STMX:{coinMarketCap:'https://coinmarketcap.com/currencies/stormx/', coinPriceForcast:''},
     SUSHI:{coinMarketCap:'https://coinmarketcap.com/currencies/sushiswap/', coinPriceForcast:'https://coinpriceforecast.com/sushi'},
