@@ -17,7 +17,8 @@ function importVoyagerCSVgmail(){
         buttonSet.YES_NO_CANCEL
       )
       if (response == true){
-        csvData = importDummyVoyagerCSV(sheet)
+        csvData = importDummyVoyagerCSV(sheet);
+        csvData.splice(0,1); //remove headers row
         buildVoyagerCSVSheet(csvData);
         return;
       }
@@ -41,6 +42,7 @@ function importVoyagerCSVgmail(){
 
     if (response == true){
       csvData = importCSV(attachment, sheet);
+      csvData.splice(0,1); //remove headers row
       buildVoyagerCSVSheet(csvData);
     }
     else if (response == false){
@@ -52,6 +54,7 @@ function importVoyagerCSVgmail(){
       )
       if (response == true){
         csvData = importDummyVoyagerCSV(sheet)
+        csvData.splice(0,1); //remove headers row
         buildVoyagerCSVSheet(csvData);
       }
     }
@@ -59,7 +62,7 @@ function importVoyagerCSVgmail(){
 }
 
 function importDummyVoyagerCSV(sheet){
-  csvData = dummyVoyagerCSV(100); //imports 25 rows of random dummy CSV data
+  csvData = dummyVoyagerCSV(100); //imports 100 rows of random dummy CSV data
   Logger.log(csvData)
   dummySheet = createSheet('Voyager CSV')
   dummySheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
@@ -68,13 +71,11 @@ function importDummyVoyagerCSV(sheet){
 }
 
 function buildVoyagerCSVSheet(data) {
-  //var i = 0;
-
-  var s = SpreadsheetApp.getActiveSpreadsheet();
-  var voyager_CSV_Sheet = s.getSheetByName('Voyager CSV');
-  var drng = voyager_CSV_Sheet.getDataRange();
-  var rng = voyager_CSV_Sheet.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
-  var rngA = rng.getValues();//Array of input values
+  //var s = SpreadsheetApp.getActiveSpreadsheet();
+  //var voyager_CSV_Sheet = s.getSheetByName('Voyager CSV');
+  //var drng = voyager_CSV_Sheet.getDataRange();
+  //var rng = voyager_CSV_Sheet.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
+  //var rngA = rng.getValues();//Array of input values
   var transactions ={};
 
   /**
@@ -100,31 +101,31 @@ function buildVoyagerCSVSheet(data) {
               'Processing...'
   );
 
-  transactions = voyager_csv_sheet_to_dictionary(true);
+  transactions = voyager_csv_sheet_to_dictionary(data, true);
 
   htmlPopUp('<b>Processed ' +
-    String(rngA.length) + "/" + String(rngA.length) +
+    String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Building Gains Sheet...'
   );
   buildGainsSheet(transactions);
   htmlPopUp('<b>Processed ' +
-    String(rngA.length) + "/" + String(rngA.length) +
+    String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Building Current Market Sheet...'
   );
   buildCurrentMarketSheet(transactions);
   htmlPopUp('<b>Processed ' +
-    String(rngA.length) + "/" + String(rngA.length) +
+    String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Building Coin Forecast Sheet...'
   );
   buildCoinForecastSheet(transactions);
   htmlPopUp('<b>Processed ' +
-    String(rngA.length) + "/" + String(rngA.length) +
+    String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Building Gains Forecast Table...'
@@ -132,7 +133,7 @@ function buildVoyagerCSVSheet(data) {
   buildGainsForecastTable();
 
   htmlPopUp('<b>Processed ' +
-    String(rngA.length) + "/" + String(rngA.length) +
+    String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
     displayHeroImg(randomIntFromInterval(0,250)),
     'Calculating Coin Totals...'
@@ -176,31 +177,35 @@ function importCSV(attachment, sheet){
   return csvData
 }
 
-function voyager_csv_sheet_to_dictionary(showHeroPictures=false){
-  var s = SpreadsheetApp.getActiveSpreadsheet();
-  var sht = s.getSheetByName('Voyager CSV');
-  var drng = sht.getDataRange();
-  var rng = sht.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
-  var rngA = rng.getValues();//Array of input values
+function voyager_csv_sheet_to_dictionary(data="", showHeroPictures=false){
+  if (data == ""){
+    var s = SpreadsheetApp.getActiveSpreadsheet();
+    var sht = s.getSheetByName('Voyager CSV');
+    var drng = sht.getDataRange();
+    var rng = sht.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
+    var data = rng.getValues();//Array of input values
+  }
   var transactions ={};
+  var dataLength = 0;
   var i = 0;
 
   var x = 0
-  for([transaction, dict] of Object.entries(rngA)){ //build dictionary of coins
+  for([transaction, dict] of Object.entries(data)){ //build dictionary of coins
+    dataLength = data.length;
     var transaction_date = dict[0];
     var transaction_id = dict[1];
     var transaction_direction = dict[2];
     var transaction_type = dict[3];
     var base_asset = dict[4];
     var quote_asset = dict[5];
-    var quantity = dict[6];
-    var net_amount = dict[7];
-    var price = dict[8];
+    var quantity = Number(dict[6]);
+    var net_amount = Number(dict[7]);
+    var price = Number(dict[8]);
 
     if (showHeroPictures == true){
-      if (x % 75 === 0){ //display progress every X transactions
+      if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
         htmlPopUp('<b>Processed Transaction ' +
-                    String(x) + "/" + String(rngA.length-1) +
+                    String(x) + "/" + String(data.length) +
                     '<br><br>' +
                     displayHeroImg(randomIntFromInterval(0,250)),
                     'Processing...'
@@ -367,7 +372,9 @@ function dummyVoyagerCSV(numberOfRows = 10) {
   var endDate = new Date();
   var transactionID = "";
   var transactionDirection = ['Buy', 'Sell', 'deposit'];
+  var randomTransactionDirection = "";
   var transactionType = ['TRADE','INTEREST','BANK','REWARD', 'ADMIN'];
+  var randomTransactionType = "";
   var baseAssets = ['ADA', 'BTC', 'ETH', 'SOL', 'STMX', 'DOT', 'USD', 'USDC', 'VET', 'VGX'];
   var qty = 0;
   var netAmt = 0;
@@ -378,11 +385,26 @@ function dummyVoyagerCSV(numberOfRows = 10) {
   for(let i =0; i < numberOfRows; i++){
     date = new Date(+startDate + Math.random() * (endDate - startDate)).toISOString();
     transactionID = makeid(10);
-    let randomTransactionDirection = transactionDirection[Math.floor(Math.random() * transactionDirection.length)];
-    let randomTransactionType = transactionType[Math.floor(Math.random() * transactionType.length)];
     let randomBaseAsset = baseAssets[Math.floor(Math.random() * baseAssets.length)];
-    if (randomTransactionDirection == 'Sell'){ //reduce odds of having more sold than bought
-      qty = (Math.random() * 10) + 1;
+
+    if (randomBaseAsset != 'USD'){
+      randomTransactionDirection = transactionDirection[Math.floor(Math.random() * transactionDirection.length)];
+      randomTransactionType = transactionType[Math.floor(Math.random() * transactionType.length)];
+    } else {
+      randomTransactionDirection = 'deposit';
+      randomTransactionType = 'bank';
+    }
+
+    if (randomTransactionDirection == 'Sell' && randomBaseAsset != 'BTC'){ //reduce odds of having more sold than bought
+      qty = (Math.random() * 5) + .1;
+    } else if (randomTransactionDirection == 'Sell' && randomBaseAsset == 'BTC'){ //reduce odds of having more sold than bought
+      qty = (Math.random() * .01) + .001;
+    } else if (randomBaseAsset == 'USD') {
+      qty = (Math.random() * 1000) + 1;
+    } else if (randomBaseAsset == 'BTC') {
+      qty = (Math.random() * 1) + .001;
+    } else if (randomBaseAsset == 'ETH') {
+      qty = (Math.random() * 50) + .05;
     } else {
       qty = (Math.random() * 1000) + 1;
     }
@@ -409,7 +431,7 @@ function dummyVoyagerCSV(numberOfRows = 10) {
       price = (Math.random() * 4) + 0.01;
     }
 
-    dummyDataCSV = dummyDataCSV + '\r\n' + date.toString() + ',' + transactionID + ',' + randomTransactionDirection + ',' + randomTransactionType + "," + randomBaseAsset + ',USD,' + String(qty) + ',' + String(price) + ',' + String(qty*price);
+    dummyDataCSV = dummyDataCSV + '\r\n' + date.toString() + ',' + transactionID + ',' + randomTransactionDirection + ',' + randomTransactionType + "," + randomBaseAsset + ',USD,' + String(qty) + ',' + String(qty*price) + ',' + String(price);
   }
 
   dummyDataCSV = dummyHeaderCSV + dummyDataCSV;

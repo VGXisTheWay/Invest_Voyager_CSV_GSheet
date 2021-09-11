@@ -215,7 +215,7 @@ function getCoinsWithForecast(){
  * @customfunction
  */
 function getAveBal(sym){
-  //var sym = "STMX";
+  //var sym = "SOL";  //for troubleshooting only
   var currentMonth = new Date().getMonth();
   var date = new Date();
   var lastDayOfThisMonth = new Date(date.getFullYear(), currentMonth+1, 0).getDate();
