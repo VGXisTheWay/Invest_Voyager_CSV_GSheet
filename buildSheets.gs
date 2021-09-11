@@ -4,12 +4,13 @@
  * @customfunction
  */
 function buildGainsSheet(transactions){
-  transactions = voyager_csv_sheet_to_dictionary(false);
+  //transactions = voyager_csv_sheet_to_dictionary(false); //for troubleshooting only
   var gainsSheet = createSheet('Gains');
   var gainsHeaders = ["Coin", "Current Interest", "Quantity", '=CONCATENATE(TEXT(NOW(),"MMM")," Ave Daily Qty")', "Expected Interest Income", "Ave Cost Per Share", "Total Cost", "7-Day Price Graph", "Current Price", "Current Value", "$ Gain", "% Gain", "Total Interest Earned", "Refresh Data"];
   var headerRange = gainsSheet.getRange(1,1,1,gainsHeaders.length);
   var i = 0;
   var transactionsVGX_length = 0;
+  var vgxQuantity = 0;
   for (header in gainsHeaders){
     gainsSheet.getRange(1,i+1).setValue(gainsHeaders[i]);
     i += 1;
@@ -29,16 +30,19 @@ function buildGainsSheet(transactions){
       gainsSheet.getRange(row,1).setValue(coin);
       //Interest
       if(["BTC", "ETH", "USDC"].includes(coin)){
-        gainsSheet.getRange(row,2).setFormula("=IFS(INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>20000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.5%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>5000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.0%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>500,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+0.5%)");
-        transactionsVGX_length = Object.keys(transactions['VGX']).length-1;
-        if(5000 > transactions['VGX'][transactionsVGX_length]['total_quantity'] > 500){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Adventurer! 0.5% BOOST').setFontColor('purple');
-        }
-        else if(20000 > transactions['VGX'][transactionsVGX_length]['total_quantity'] > 5000){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Explorer! 1% BOOST').setFontColor('purple');
-        }
-        else if(transactions['VGX'][transactionsVGX_length]['total_quantity']>20000){
-          gainsSheet.getRange("B"+String(row)).setNote('Congrats Navigator! 1.5% BOOST').setFontColor('purple');
+        if (transactions['VGX'] != undefined){
+          transactionsVGX_length = Object.keys(transactions['VGX']).length-1;
+          vgxQuantity = transactions['VGX'][transactionsVGX_length]['total_quantity'];
+          gainsSheet.getRange(row,2).setFormula("=IFS(INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>20000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.5%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>5000,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+1.0%, INDEX($A:$C,MATCH(\"VGX\",$A:$A,0),3)>500,SUBSTITUTE(INDEX('Voyager Interest'!$B:$C,MATCH(\"*" + coin + "*\",'Voyager Interest'!$C:$C,0),1),\"*\",\"\")+0.5%)");
+          if(5000 > vgxQuantity && vgxQuantity > 500){
+            gainsSheet.getRange("B"+String(row)).setNote('Congrats Adventurer! 0.5% BOOST').setFontColor('purple').setFontWeight('bold');
+          }
+          else if(20000 > vgxQuantity && vgxQuantity > 5000){
+            gainsSheet.getRange("B"+String(row)).setNote('Congrats Explorer! 1% BOOST').setFontColor('purple').setFontWeight('bold');
+          }
+          else if(vgxQuantity > 20000){
+            gainsSheet.getRange("B"+String(row)).setNote('Congrats Navigator! 1.5% BOOST').setFontColor('purple').setFontWeight('bold');
+          }
         }
       }
       else{
@@ -463,7 +467,7 @@ function createSheet(sheetName){
   var sheet = SpreadsheetApp.getActiveSpreadsheet();
   var newSheet = sheet.getSheetByName(sheetName);
   if (newSheet != null){
-    newSheet.clearContents().clearFormats();
+    newSheet.clearContents().clearFormats().clearNotes();
   }
   else{
     newSheet = sheet.insertSheet();
