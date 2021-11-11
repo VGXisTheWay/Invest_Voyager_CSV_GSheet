@@ -101,7 +101,7 @@ function buildVoyagerCSVSheet(data) {
               'Processing...'
   );
 
-  transactions = voyager_csv_sheet_to_dictionary(data, true);
+  transactions = voyager_csv_sheet_to_dictionary(data);//, true);
 
   htmlPopUp('<b>Processed ' +
     String(data.length) + "/" + String(data.length) +
@@ -178,101 +178,123 @@ function importCSV(attachment, sheet){
 }
 
 function voyager_csv_sheet_to_dictionary(data="", showHeroPictures=false){
-  //Build dictionary with headers as keys from Voyager CSV sheet
-  //This will allows us to work with different formats based on headers vs column position.
-  //Get the currently active sheet
-  var s = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = s.getSheetByName('Voyager CSV');
-  //Get the number of rows and columns which contain some content
-  var [rows, columns] = [sheet.getLastRow(), sheet.getLastColumn()];
-  //Get the data contained in those rows and columns as a 2 dimensional array
-  var data = sheet.getRange(1, 1, rows, columns).getValues();
-
-  // I modified below script.
-  var header = data[0];
-  data.shift();
-  var convertedData = data.map(function(row) {
-    return header.reduce(function(o, h, i) {
-      o[h] = row[i];
-      return o;
-    }, {});
-  });
-
-  data = convertedData;
-
   var transactions ={};
   var dataLength = 0;
   var i = 0;
-  var x = 0;
+  var x = 0
+  data = build_dict();
 
-  for(i in data){ //build dictionary of coins
-    dataLength = data.length;
-    var transaction_date = data[i]['transaction_date'];
-    var transaction_id = data[i]['transaction_id'];
-    var transaction_direction = data[i]['transaction_direction'];
-    var transaction_type = data[i]['transaction_type'];
-    var base_asset = data[i]['base_asset'];
-    var quote_asset = data[i]['quote_asset'];
-    var quantity = Number(data[i]['quantity']);
-    var net_amount = Number(data[i]['net_amount']);
-    var price = Number(data[i]['price']);
-
-    if (showHeroPictures == true){
-      if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
-        htmlPopUp('<b>Processed Transaction ' +
-                    String(x) + "/" + String(data.length) +
-                    '<br><br>' +
-                    displayHeroImg(randomIntFromInterval(0,250)),
-                    'Processing...'
-                  );
-      }
-    }
-
-    if (transactions[base_asset] == undefined){
-      transactions[base_asset] = {};
-    }
-    if (transactions[base_asset][0] == undefined){
-      i = 0
-      transactions[base_asset][i] = {};
-    }
-    else{
-      i = Object.keys(transactions[base_asset]).length;
-    }
-    transactions[base_asset][i] = {};
-    transactions[base_asset][i] = {};
-    transactions[base_asset][i]['transaction_date'] = transaction_date;
-    transactions[base_asset][i]['transaction_id'] = transaction_id;
-    transactions[base_asset][i]['transaction_direction'] = transaction_direction;
-    transactions[base_asset][i]['transaction_type'] = transaction_type;
-    transactions[base_asset][i]['base_asset'] = base_asset;
-    transactions[base_asset][i]['quote_asset'] = quote_asset;
-    transactions[base_asset][i]['quantity'] = quantity;
-    transactions[base_asset][i]['net_amount'] = net_amount;
-    transactions[base_asset][i]['price'] = price;
-
-    if (transactions[base_asset][i-1] == undefined){ //check if there was a previous transaction for this coin
-      transactions[base_asset][i]['total_quantity'] = quantity;
-    }
-    else {
-      if (transaction_direction == "Buy" || transaction_direction == "deposit"){ //add previous qty to this one and record new total
-        transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] + quantity;
-        if(base_asset == "VET"){
-          Logger.log(base_asset + " Transaction: " + String(i) + " Buy: " + String(quantity) + " Adding to: " + String(transactions[base_asset][i-1]['total_quantity']))
-          Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
-        }
-      }
-      else if (transaction_direction == "Sell"){ //subtract previous qty from this one and record new total
-        transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] - quantity;
-        if(base_asset == "VET"){
-          Logger.log(base_asset + " Transaction: " + String(i) + " Sell: " + String(quantity) + " Subtracting from: " + String(transactions[base_asset][i-1]['total_quantity']))
-          Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
-        }
-      }
-    }
-    x+=1;
-  }
+  test().then(results => {
+     // array of results in order here
+     console.log(transactions);
+     return transactions
+  }).catch(err => {
+      console.log(err);
+  });
   return transactions
+
+  function test(){
+    let promises = [];
+    for (let i=0; i < data.length; i++){
+      promises.push(process_transactions(data, i));
+    }
+
+    return Promise.all(promises);
+  }
+
+  function build_dict(){
+    //Build dictionary with headers as keys from Voyager CSV sheet
+    //This will allows us to work with different formats based on headers vs column position.
+    //Get the currently active sheet
+    var s = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = s.getSheetByName('Voyager CSV');
+    //Get the number of rows and columns which contain some content
+    var [rows, columns] = [sheet.getLastRow(), sheet.getLastColumn()];
+    //Get the data contained in those rows and columns as a 2 dimensional array
+    var data = sheet.getRange(1, 1, rows, columns).getValues();
+
+    // I modified below script.
+    var header = data[0];
+    data.shift();
+    var convertedData = data.map(function(row) {
+      return header.reduce(function(o, h, i) {
+        o[h] = row[i];
+        return o;
+      }, {});
+    });
+    return convertedData
+  }
+
+  async function process_transactions(data, i){
+    //TODO Recognize which format CSV is in Voyager CSV
+      dataLength = data.length;
+      var transaction_date = data[i]['transaction_date'];
+      var transaction_id = data[i]['transaction_id'];
+      var transaction_direction = data[i]['transaction_direction'];
+      var transaction_type = data[i]['transaction_type'];
+      var base_asset = data[i]['base_asset'];
+      var quote_asset = data[i]['quote_asset'];
+      var quantity = Number(data[i]['quantity']);
+      var net_amount = Number(data[i]['net_amount']);
+      var price = Number(data[i]['price']);
+
+      if (showHeroPictures == true){
+        if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
+          htmlPopUp('<b>Processed Transaction ' +
+                      String(x) + "/" + String(data.length) +
+                      '<br><br>' +
+                      displayHeroImg(randomIntFromInterval(0,250)),
+                      'Processing...'
+                    );
+        }
+      }
+
+      if (transactions[base_asset] == undefined){
+        transactions[base_asset] = {};
+      }
+      if (transactions[base_asset][0] == undefined){
+        i = 0
+        transactions[base_asset][i] = {};
+      }
+      else{
+        i = Object.keys(transactions[base_asset]).length;
+      }
+      transactions[base_asset][i] = {};
+      transactions[base_asset][i] = {};
+      transactions[base_asset][i]['transaction_date'] = transaction_date;
+      transactions[base_asset][i]['transaction_id'] = transaction_id;
+      transactions[base_asset][i]['transaction_direction'] = transaction_direction;
+      transactions[base_asset][i]['transaction_type'] = transaction_type;
+      transactions[base_asset][i]['base_asset'] = base_asset;
+      transactions[base_asset][i]['quote_asset'] = quote_asset;
+      transactions[base_asset][i]['quantity'] = quantity;
+      transactions[base_asset][i]['net_amount'] = net_amount;
+      transactions[base_asset][i]['price'] = price;
+
+      if (transactions[base_asset][i-1] == undefined){ //check if there was a previous transaction for this coin
+        transactions[base_asset][i]['total_quantity'] = quantity;
+      }
+      else {
+        if (transaction_direction == "Buy" || transaction_direction == "deposit"){ //add previous qty to this one and record new total
+          transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] + quantity;
+          if(base_asset == "VET"){
+            Logger.log(base_asset + " Transaction: " + String(i) + " Buy: " + String(quantity) + " Adding to: " + String(transactions[base_asset][i-1]['total_quantity']))
+            Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
+          }
+        }
+        else if (transaction_direction == "Sell"){ //subtract previous qty from this one and record new total
+          transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] - quantity;
+          if(base_asset == "VET"){
+            Logger.log(base_asset + " Transaction: " + String(i) + " Sell: " + String(quantity) + " Subtracting from: " + String(transactions[base_asset][i-1]['total_quantity']))
+            Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
+          }
+        }
+      }
+      x+=1;
+      return transactions
+  }
 }
+
 
 function importCSVFromWeb(url) {
   Logger.log("running importCSVFromWeb")
