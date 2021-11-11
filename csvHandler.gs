@@ -178,29 +178,44 @@ function importCSV(attachment, sheet){
 }
 
 function voyager_csv_sheet_to_dictionary(data="", showHeroPictures=false){
-  if (data == ""){
-    var s = SpreadsheetApp.getActiveSpreadsheet();
-    var sht = s.getSheetByName('Voyager CSV');
-    var drng = sht.getDataRange();
-    var rng = sht.getRange(2,1, drng.getLastRow()-1,drng.getLastColumn());
-    var data = rng.getValues();//Array of input values
-  }
+  //Build dictionary with headers as keys from Voyager CSV sheet
+  //This will allows us to work with different formats based on headers vs column position.
+  //Get the currently active sheet
+  var s = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = s.getSheetByName('Voyager CSV');
+  //Get the number of rows and columns which contain some content
+  var [rows, columns] = [sheet.getLastRow(), sheet.getLastColumn()];
+  //Get the data contained in those rows and columns as a 2 dimensional array
+  var data = sheet.getRange(1, 1, rows, columns).getValues();
+
+  // I modified below script.
+  var header = data[0];
+  data.shift();
+  var convertedData = data.map(function(row) {
+    return header.reduce(function(o, h, i) {
+      o[h] = row[i];
+      return o;
+    }, {});
+  });
+
+  data = convertedData;
+
   var transactions ={};
   var dataLength = 0;
   var i = 0;
+  var x = 0;
 
-  var x = 0
-  for([transaction, dict] of Object.entries(data)){ //build dictionary of coins
+  for(i in data){ //build dictionary of coins
     dataLength = data.length;
-    var transaction_date = dict[0];
-    var transaction_id = dict[1];
-    var transaction_direction = dict[2];
-    var transaction_type = dict[3];
-    var base_asset = dict[4];
-    var quote_asset = dict[5];
-    var quantity = Number(dict[6]);
-    var net_amount = Number(dict[7]);
-    var price = Number(dict[8]);
+    var transaction_date = data[i]['transaction_date'];
+    var transaction_id = data[i]['transaction_id'];
+    var transaction_direction = data[i]['transaction_direction'];
+    var transaction_type = data[i]['transaction_type'];
+    var base_asset = data[i]['base_asset'];
+    var quote_asset = data[i]['quote_asset'];
+    var quantity = Number(data[i]['quantity']);
+    var net_amount = Number(data[i]['net_amount']);
+    var price = Number(data[i]['price']);
 
     if (showHeroPictures == true){
       if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
