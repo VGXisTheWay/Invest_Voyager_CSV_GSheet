@@ -70,7 +70,7 @@ function importDummyVoyagerCSV(sheet){
   return csvData
 }
 
-function buildVoyagerCSVSheet(data) {
+async function buildVoyagerCSVSheet(data) {
   //var s = SpreadsheetApp.getActiveSpreadsheet();
   //var voyager_CSV_Sheet = s.getSheetByName('Voyager CSV');
   //var drng = voyager_CSV_Sheet.getDataRange();
@@ -103,6 +103,8 @@ function buildVoyagerCSVSheet(data) {
 
   transactions = voyager_csv_sheet_to_dictionary(data);//, true);
 
+  //TODO async building all the sheets
+/*
   htmlPopUp('<b>Processed ' +
     String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
@@ -124,6 +126,25 @@ function buildVoyagerCSVSheet(data) {
     'Building Coin Forecast Sheet...'
   );
   buildCoinForecastSheet(transactions);
+*/
+/*
+  async function inParallel(){
+  const promise1 = buildGainsSheet(transactions);
+  const promise2 = buildCurrentMarketSheet(transactions);
+  const promise3 = buildCoinForecastSheet(transactions);
+  const number1 = await promise1;
+  const number2 = await promise2;
+  const number3 = await promise3;
+  }
+  inParallel();
+*/
+
+  let promises = [];
+  promises.push(buildGainsSheet(transactions));
+  promises.push(buildCurrentMarketSheet(transactions));
+  promises.push(buildCoinForecastSheet(transactions));
+  await Promise.all(promises)
+
   htmlPopUp('<b>Processed ' +
     String(data.length) + "/" + String(data.length) +
     ' Transactions </b><br><br>' +
@@ -226,75 +247,146 @@ function voyager_csv_sheet_to_dictionary(data="", showHeroPictures=false){
   }
 
   async function process_transactions(data, i){
-    //TODO Recognize which format CSV is in Voyager CSV
-      dataLength = data.length;
-      var transaction_date = data[i]['transaction_date'];
-      var transaction_id = data[i]['transaction_id'];
-      var transaction_direction = data[i]['transaction_direction'];
-      var transaction_type = data[i]['transaction_type'];
-      var base_asset = data[i]['base_asset'];
-      var quote_asset = data[i]['quote_asset'];
-      var quantity = Number(data[i]['quantity']);
-      var net_amount = Number(data[i]['net_amount']);
-      var price = Number(data[i]['price']);
+    var transaction_date
+    var transaction_id
+    var transaction_direction
+    var transaction_type
+    var base_asset
+    var quote_asset
+    var quantity
+    var net_amount
+    var price
+    var message = ''
+    dataLength = data.length;
 
-      if (showHeroPictures == true){
-        if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
-          htmlPopUp('<b>Processed Transaction ' +
-                      String(x) + "/" + String(data.length) +
-                      '<br><br>' +
-                      displayHeroImg(randomIntFromInterval(0,250)),
-                      'Processing...'
-                    );
-        }
-      }
+    var keys = Object.keys(data[i])
+    Logger.log(keys)
+    var coin_tracker_keys = ['Date', 'Received Quantity', 'Received Currency', 'Sent Quantity', 'Sent Currency', 'Fee Amount', 'Fee Currency']
+    var voyager_default = ['transaction_date', 'transaction_id', 'transaction_direction', 'transaction_type', 'base_asset', 'quote_asset', 'quantity', 'net_amount', 'price']
+    if(JSON.stringify(keys) === JSON.stringify(coin_tracker_keys)){
+      //CSV Format is Coin Tracker
+      message = 'Converting Coin Tracker CSV to Voyager Default';
+      showHeroPictures = true;
+      sheet = SpreadsheetApp.getActiveSpreadsheet();
+      voyager_CSV_Sheet = sheet.getSheetByName('Voyager CSV');
+      transaction_date = data[i]['Date'];
+      transaction_id = 'N/A';
+      voyager_CSV_Sheet.getRange('B' + String(i+2)).setValue(transaction_id);
+      quote_asset = "USD";
 
-      if (transactions[base_asset] == undefined){
-        transactions[base_asset] = {};
+      if(data[i]['Sent Quantity'] == "" && data[i]['Received Currency'] == 'USD'){
+        transaction_direction = 'deposit';
+        transaction_type = 'BANK';
+        base_asset = data[i]['Received Currency'];
+        quote_asset = "N/A";
+        quantity = data[i]['Received Quantity']
+        price = 1;
       }
-      if (transactions[base_asset][0] == undefined){
-        i = 0
-        transactions[base_asset][i] = {};
+      else if(data[i]['Sent Quantity'] == "" && data[i]['Received Currency'] != 'USD'){
+        transaction_direction = 'deposit';
+        transaction_type = 'INTEREST';
+        base_asset = data[i]['Received Currency'];
+        quote_asset = "N/A";
+        quantity = Number(data[i]['Received Quantity']);
+        price = Number(data[i]['Sent Quantity']) / Number(data[i]['Received Quantity']);
+        net_amount = Number(data[i]['Received Quantity']) * price;
+      }
+      else if(data[i]['Received Currency'] == 'USD' && data[i]['Sent Currency'] != ""){
+        transaction_direction = 'Sell';
+        transaction_type = 'TRADE';
+        base_asset = data[i]['Sent Currency'];
+        net_amount = Number(data[i]['Received Quantity']);
+        quantity = Number(data[i]['Sent Quantity']);
+        price = Number(data[i]['Received Quantity']) / Number(data[i]['Sent Quantity']);
       }
       else{
-        i = Object.keys(transactions[base_asset]).length;
+        transaction_direction = 'Buy';
+        transaction_type = 'TRADE';
+        base_asset = data[i]['Received Currency'];
+        net_amount = Number(data[i]['Sent Quantity']);
+        quantity = Number(data[i]['Received Quantity']);
+        price = Number(data[i]['Sent Quantity']) / Number(data[i]['Received Quantity']);
       }
-      transactions[base_asset][i] = {};
-      transactions[base_asset][i] = {};
-      transactions[base_asset][i]['transaction_date'] = transaction_date;
-      transactions[base_asset][i]['transaction_id'] = transaction_id;
-      transactions[base_asset][i]['transaction_direction'] = transaction_direction;
-      transactions[base_asset][i]['transaction_type'] = transaction_type;
-      transactions[base_asset][i]['base_asset'] = base_asset;
-      transactions[base_asset][i]['quote_asset'] = quote_asset;
-      transactions[base_asset][i]['quantity'] = quantity;
-      transactions[base_asset][i]['net_amount'] = net_amount;
-      transactions[base_asset][i]['price'] = price;
+      //Reformat CSV sheet to match Voyager Standard so gains sheet formulas work
+      voyager_CSV_Sheet.getRange('C' + String(i+2)).setValue(transaction_direction);
+      voyager_CSV_Sheet.getRange('D' + String(i+2)).setValue(transaction_type);
+      voyager_CSV_Sheet.getRange('E' + String(i+2)).setValue(base_asset);
+      voyager_CSV_Sheet.getRange('F' + String(i+2)).setValue(quote_asset);
+      voyager_CSV_Sheet.getRange('G' + String(i+2)).setValue(quantity);
+      voyager_CSV_Sheet.getRange('H' + String(i+2)).setValue(quantity*price);
+      voyager_CSV_Sheet.getRange('I' + String(i+2)).setValue(price);
+      voyager_CSV_Sheet.getRange('A1:I1').setValues([voyager_default]);
+      }
+    else if(JSON.stringify(keys) === JSON.stringify(voyager_default)){
+      //CSV Format is Voyager Default
+      transaction_date = data[i]['transaction_date'];
+      transaction_id = data[i]['transaction_id'];
+      transaction_direction = data[i]['transaction_direction'];
+      transaction_type = data[i]['transaction_type'];
+      base_asset = data[i]['base_asset'];
+      quote_asset = data[i]['quote_asset'];
+      quantity = Number(data[i]['quantity']);
+      net_amount = Number(data[i]['net_amount']);
+      price = Number(data[i]['price']);
+    }
 
-      if (transactions[base_asset][i-1] == undefined){ //check if there was a previous transaction for this coin
-        transactions[base_asset][i]['total_quantity'] = quantity;
+    if (showHeroPictures == true){
+      if (x % Math.floor(dataLength/5) === 0){ //displays a new hero image every ~1/5 of the iterations
+        htmlPopUp(message + '<br>' +
+                    '<b>Processed Transaction ' +
+                    String(x) + "/" + String(data.length) +
+                    '<br><br>' +
+                    displayHeroImg(randomIntFromInterval(0,250)),
+                    'Processing...'
+                  );
       }
-      else {
-        if (transaction_direction == "Buy" || transaction_direction == "deposit"){ //add previous qty to this one and record new total
-          transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] + quantity;
-          if(base_asset == "VET"){
-            Logger.log(base_asset + " Transaction: " + String(i) + " Buy: " + String(quantity) + " Adding to: " + String(transactions[base_asset][i-1]['total_quantity']))
-            Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
-          }
-        }
-        else if (transaction_direction == "Sell"){ //subtract previous qty from this one and record new total
-          transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] - quantity;
-          if(base_asset == "VET"){
-            Logger.log(base_asset + " Transaction: " + String(i) + " Sell: " + String(quantity) + " Subtracting from: " + String(transactions[base_asset][i-1]['total_quantity']))
-            Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
-          }
+    }
+
+    if (transactions[base_asset] == undefined){
+      transactions[base_asset] = {};
+    }
+    if (transactions[base_asset][0] == undefined){
+      i = 0
+      transactions[base_asset][i] = {};
+    }
+    else{
+      i = Object.keys(transactions[base_asset]).length;
+    }
+    transactions[base_asset][i] = {};
+    transactions[base_asset][i] = {};
+    transactions[base_asset][i]['transaction_date'] = transaction_date;
+    transactions[base_asset][i]['transaction_id'] = transaction_id;
+    transactions[base_asset][i]['transaction_direction'] = transaction_direction;
+    transactions[base_asset][i]['transaction_type'] = transaction_type;
+    transactions[base_asset][i]['base_asset'] = base_asset;
+    transactions[base_asset][i]['quote_asset'] = quote_asset;
+    transactions[base_asset][i]['quantity'] = quantity;
+    transactions[base_asset][i]['net_amount'] = net_amount;
+    transactions[base_asset][i]['price'] = price;
+
+    if (transactions[base_asset][i-1] == undefined){ //check if there was a previous transaction for this coin
+      transactions[base_asset][i]['total_quantity'] = quantity;
+    }
+    else {
+      if (transaction_direction == "Buy" || transaction_direction == "deposit"){ //add previous qty to this one and record new total
+        transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] + quantity;
+        if(base_asset == "VET"){
+          Logger.log(base_asset + " Transaction: " + String(i) + " Buy: " + String(quantity) + " Adding to: " + String(transactions[base_asset][i-1]['total_quantity']))
+          Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
         }
       }
-      x+=1;
-      return transactions
+      else if (transaction_direction == "Sell"){ //subtract previous qty from this one and record new total
+        transactions[base_asset][i]['total_quantity'] = transactions[base_asset][i-1]['total_quantity'] - quantity;
+        if(base_asset == "VET"){
+          Logger.log(base_asset + " Transaction: " + String(i) + " Sell: " + String(quantity) + " Subtracting from: " + String(transactions[base_asset][i-1]['total_quantity']))
+          Logger.log("Total Qty: " + String(transactions[base_asset][i]['total_quantity']))
+        }
+      }
+    }
+    x+=1;
+    return transactions
   }
 }
-
 
 function importCSVFromWeb(url) {
   Logger.log("running importCSVFromWeb")
